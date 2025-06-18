@@ -5,25 +5,39 @@ import {
   Home, 
   Users, 
   Bell,
-  Settings
+  Settings,
+  UserCog
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  currentUser?: any;
+  hasPermission?: (permission: string) => boolean;
 }
 
 const menuItems = [
-  { id: "dashboard", label: "Dashboard", icon: Home },
-  { id: "clients", label: "Clients", icon: Users },
-  { id: "calendar", label: "Tax Calendar", icon: Calendar },
-  { id: "documents", label: "Documents", icon: FileText },
-  { id: "notifications", label: "Notifications", icon: Bell },
-  { id: "settings", label: "Settings", icon: Settings },
+  { id: "dashboard", label: "Dashboard", icon: Home, permission: null },
+  { id: "clients", label: "Clients", icon: Users, permission: "client_management" },
+  { id: "calendar", label: "Tax Calendar", icon: Calendar, permission: "tax_management" },
+  { id: "documents", label: "Documents", icon: FileText, permission: "document_view" },
+  { id: "notifications", label: "Notifications", icon: Bell, permission: null },
+  { id: "users", label: "User Management", icon: UserCog, permission: "user_management" },
+  { id: "settings", label: "Settings", icon: Settings, permission: "system_settings" },
 ];
 
-export const Sidebar = ({ activeTab, setActiveTab }: SidebarProps) => {
+export const Sidebar = ({ activeTab, setActiveTab, currentUser, hasPermission }: SidebarProps) => {
+  const getVisibleMenuItems = () => {
+    return menuItems.filter(item => {
+      if (!item.permission) return true; // Always show items with no permission requirement
+      if (!hasPermission) return true; // Show all if no permission check function
+      return hasPermission(item.permission) || hasPermission("view_only") || hasPermission("all");
+    });
+  };
+
+  const visibleMenuItems = getVisibleMenuItems();
+
   return (
     <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
       <div className="p-6">
@@ -35,18 +49,34 @@ export const Sidebar = ({ activeTab, setActiveTab }: SidebarProps) => {
         </div>
       </div>
       
+      {/* User Info */}
+      {currentUser && (
+        <div className="px-6 pb-4">
+          <div className="bg-blue-50 rounded-lg p-3">
+            <p className="font-medium text-blue-900 text-sm">{currentUser.name}</p>
+            <p className="text-blue-700 text-xs">{currentUser.role}</p>
+            <p className="text-blue-600 text-xs">{currentUser.department}</p>
+          </div>
+        </div>
+      )}
+      
       <nav className="flex-1 px-4 pb-4">
         <ul className="space-y-2">
-          {menuItems.map((item) => {
+          {visibleMenuItems.map((item) => {
             const Icon = item.icon;
+            const isDisabled = item.permission && hasPermission && !hasPermission(item.permission) && !hasPermission("view_only") && !hasPermission("all");
+            
             return (
               <li key={item.id}>
                 <button
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => !isDisabled && setActiveTab(item.id)}
+                  disabled={isDisabled}
                   className={cn(
                     "w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors",
                     activeTab === item.id
                       ? "bg-blue-50 text-blue-700 border border-blue-200"
+                      : isDisabled
+                      ? "text-gray-400 cursor-not-allowed"
                       : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                   )}
                 >
