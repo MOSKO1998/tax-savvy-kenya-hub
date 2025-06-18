@@ -1,11 +1,41 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import { useState } from "react";
+import { DashboardOverview } from "@/components/DashboardOverview";
+import { ClientManagement } from "@/components/ClientManagement";
+import { TaxCalendar } from "@/components/TaxCalendar";
+import { DocumentManager } from "@/components/DocumentManager";
+import { NotificationCenter } from "@/components/NotificationCenter";
+import { Sidebar } from "@/components/Sidebar";
+import { Header } from "@/components/Header";
 
 const Index = () => {
+  const [activeTab, setActiveTab] = useState("dashboard");
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case "dashboard":
+        return <DashboardOverview />;
+      case "clients":
+        return <ClientManagement />;
+      case "calendar":
+        return <TaxCalendar />;
+      case "documents":
+        return <DocumentManager />;
+      case "notifications":
+        return <NotificationCenter />;
+      default:
+        return <DashboardOverview />;
+    }
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <div className="min-h-screen bg-gray-50 flex">
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <div className="flex-1 flex flex-col">
+        <Header />
+        <main className="flex-1 p-6">
+          {renderContent()}
+        </main>
       </div>
     </div>
   );
