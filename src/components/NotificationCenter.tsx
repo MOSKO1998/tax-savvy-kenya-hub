@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,7 @@ import {
   CheckCircle, 
   Clock,
   Filter,
-  MarkAsRead,
+  CheckCircle2,
   Settings
 } from "lucide-react";
 
@@ -134,7 +133,7 @@ export const NotificationCenter = () => {
             Settings
           </Button>
           <Button variant="outline">
-            <MarkAsRead className="h-4 w-4 mr-2" />
+            <CheckCircle2 className="h-4 w-4 mr-2" />
             Mark All Read
           </Button>
         </div>
