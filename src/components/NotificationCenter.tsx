@@ -1,16 +1,11 @@
+
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { 
-  Bell, 
-  AlertCircle, 
-  CheckCircle, 
-  Clock,
-  Filter,
-  CheckCircle2,
-  Settings
-} from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Bell } from "lucide-react";
+import { NotificationHeader } from "./NotificationHeader";
+import { NotificationFilters } from "./NotificationFilters";
+import { NotificationItem } from "./NotificationItem";
+import { NotificationStats } from "./NotificationStats";
 
 export const NotificationCenter = () => {
   const [filter, setFilter] = useState("all");
@@ -78,35 +73,6 @@ export const NotificationCenter = () => {
     }
   ];
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case "deadline":
-        return <Clock className="h-5 w-5 text-orange-600" />;
-      case "overdue":
-        return <AlertCircle className="h-5 w-5 text-red-600" />;
-      case "document":
-      case "approval":
-        return <CheckCircle className="h-5 w-5 text-green-600" />;
-      default:
-        return <Bell className="h-5 w-5 text-blue-600" />;
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "critical":
-        return "bg-red-100 text-red-800";
-      case "high":
-        return "bg-orange-100 text-orange-800";
-      case "medium":
-        return "bg-yellow-100 text-yellow-800";
-      case "low":
-        return "bg-blue-100 text-blue-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
   const filteredNotifications = notifications.filter(notification => {
     if (filter === "unread") return !notification.read;
     if (filter === "high-priority") return ["critical", "high"].includes(notification.priority);
@@ -118,113 +84,12 @@ export const NotificationCenter = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <h2 className="text-3xl font-bold text-gray-900">Notifications</h2>
-          {unreadCount > 0 && (
-            <Badge variant="destructive" className="text-xs">
-              {unreadCount} new
-            </Badge>
-          )}
-        </div>
-        <div className="flex space-x-2">
-          <Button variant="outline">
-            <Settings className="h-4 w-4 mr-2" />
-            Settings
-          </Button>
-          <Button variant="outline">
-            <CheckCircle2 className="h-4 w-4 mr-2" />
-            Mark All Read
-          </Button>
-        </div>
-      </div>
+      <NotificationHeader unreadCount={unreadCount} />
+      <NotificationFilters filter={filter} setFilter={setFilter} />
 
-      {/* Filter Buttons */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex space-x-2">
-            {[
-              { id: "all", label: "All" },
-              { id: "unread", label: "Unread" },
-              { id: "high-priority", label: "High Priority" },
-              { id: "deadlines", label: "Deadlines" }
-            ].map((filterOption) => (
-              <Button
-                key={filterOption.id}
-                variant={filter === filterOption.id ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilter(filterOption.id)}
-              >
-                {filterOption.label}
-              </Button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Notifications List */}
       <div className="space-y-4">
         {filteredNotifications.map((notification) => (
-          <Card 
-            key={notification.id} 
-            className={`transition-all hover:shadow-md ${
-              !notification.read ? "border-l-4 border-l-blue-500 bg-blue-50/30" : ""
-            }`}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-start space-x-4">
-                <div className="flex-shrink-0 mt-1">
-                  {getNotificationIcon(notification.type)}
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h4 className={`text-sm font-medium ${
-                        !notification.read ? "text-gray-900" : "text-gray-700"
-                      }`}>
-                        {notification.title}
-                      </h4>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {notification.message}
-                      </p>
-                      {notification.client && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          Client: {notification.client}
-                        </p>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center space-x-2 ml-4">
-                      <Badge className={getPriorityColor(notification.priority)}>
-                        {notification.priority}
-                      </Badge>
-                      {!notification.read && (
-                        <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between mt-3">
-                    <span className="text-xs text-gray-500">
-                      {new Date(notification.timestamp).toLocaleString()}
-                    </span>
-                    
-                    <div className="flex space-x-2">
-                      {!notification.read && (
-                        <Button variant="ghost" size="sm" className="text-xs">
-                          Mark as Read
-                        </Button>
-                      )}
-                      <Button variant="ghost" size="sm" className="text-xs">
-                        View Details
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <NotificationItem key={notification.id} notification={notification} />
         ))}
       </div>
 
@@ -237,33 +102,7 @@ export const NotificationCenter = () => {
         </Card>
       )}
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-red-600">2</div>
-            <div className="text-sm text-gray-600">Critical</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-orange-600">3</div>
-            <div className="text-sm text-gray-600">High Priority</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-blue-600">4</div>
-            <div className="text-sm text-gray-600">Unread</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-green-600">2</div>
-            <div className="text-sm text-gray-600">Completed</div>
-          </CardContent>
-        </Card>
-      </div>
+      <NotificationStats />
     </div>
   );
 };
