@@ -5,11 +5,19 @@ import { ClientManagement } from "@/components/ClientManagement";
 import { TaxCalendar } from "@/components/TaxCalendar";
 import { DocumentManager } from "@/components/DocumentManager";
 import { NotificationCenter } from "@/components/NotificationCenter";
+import { Settings } from "@/components/Settings";
+import { Login } from "@/components/Login";
 import { Sidebar } from "@/components/Sidebar";
 import { Header } from "@/components/Header";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // For demo purposes - in production this would be managed by Supabase auth
+  if (!isAuthenticated) {
+    return <Login />;
+  }
 
   const renderContent = () => {
     switch (activeTab) {
@@ -23,6 +31,8 @@ const Index = () => {
         return <DocumentManager />;
       case "notifications":
         return <NotificationCenter />;
+      case "settings":
+        return <Settings />;
       default:
         return <DashboardOverview />;
     }
