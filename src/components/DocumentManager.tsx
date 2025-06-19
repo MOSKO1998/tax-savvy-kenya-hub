@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,10 +19,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { DocumentUpload } from "@/components/DocumentUpload";
 
 export const DocumentManager = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFolder, setSelectedFolder] = useState("all");
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
 
   const folders = [
     { id: "all", name: "All Documents", count: 156 },
@@ -117,6 +118,12 @@ export const DocumentManager = () => {
     return matchesSearch && matchesFolder;
   });
 
+  const handleUploadComplete = (result: any) => {
+    console.log('Upload completed:', result);
+    setShowUploadDialog(false);
+    // Refresh documents list here if needed
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -126,12 +133,25 @@ export const DocumentManager = () => {
             <Filter className="h-4 w-4 mr-2" />
             Filter
           </Button>
-          <Button className="bg-blue-600 hover:bg-blue-700">
+          <Button 
+            className="bg-blue-600 hover:bg-blue-700"
+            onClick={() => setShowUploadDialog(true)}
+          >
             <Upload className="h-4 w-4 mr-2" />
-            Upload Document
+            Upload to Nextcloud
           </Button>
         </div>
       </div>
+
+      {/* Upload Dialog */}
+      {showUploadDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <DocumentUpload
+            onUploadComplete={handleUploadComplete}
+            onCancel={() => setShowUploadDialog(false)}
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Folders Sidebar */}
