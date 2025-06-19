@@ -6,33 +6,40 @@ import {
   Users, 
   Bell,
   Settings,
-  UserCog
+  UserCog,
+  Shield
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  currentUser?: any;
-  hasPermission?: (permission: string) => boolean;
+  userRole?: any;
 }
 
 const menuItems = [
   { id: "dashboard", label: "Dashboard", icon: Home, permission: null },
   { id: "clients", label: "Clients", icon: Users, permission: "client_management" },
+  { id: "obligations", label: "Tax Obligations", icon: Calendar, permission: "tax_management" },
   { id: "calendar", label: "Tax Calendar", icon: Calendar, permission: "tax_management" },
   { id: "documents", label: "Documents", icon: FileText, permission: "document_view" },
   { id: "notifications", label: "Notifications", icon: Bell, permission: null },
   { id: "users", label: "User Management", icon: UserCog, permission: "user_management" },
+  { id: "security", label: "Security", icon: Shield, permission: "system_settings" },
   { id: "settings", label: "Settings", icon: Settings, permission: "system_settings" },
 ];
 
-export const Sidebar = ({ activeTab, setActiveTab, currentUser, hasPermission }: SidebarProps) => {
+export const Sidebar = ({ activeTab, setActiveTab, userRole }: SidebarProps) => {
+  const hasPermission = (permission: string) => {
+    if (!userRole) return false;
+    if (userRole.permissions?.includes('all')) return true;
+    return userRole.permissions?.includes(permission) || userRole.permissions?.includes('view_only') || false;
+  };
+
   const getVisibleMenuItems = () => {
     return menuItems.filter(item => {
-      if (!item.permission) return true; // Always show items with no permission requirement
-      if (!hasPermission) return true; // Show all if no permission check function
-      return hasPermission(item.permission) || hasPermission("view_only") || hasPermission("all");
+      if (!item.permission) return true;
+      return hasPermission(item.permission);
     });
   };
 
@@ -50,12 +57,12 @@ export const Sidebar = ({ activeTab, setActiveTab, currentUser, hasPermission }:
       </div>
       
       {/* User Info */}
-      {currentUser && (
+      {userRole && (
         <div className="px-6 pb-4">
           <div className="bg-blue-50 rounded-lg p-3">
-            <p className="font-medium text-blue-900 text-sm">{currentUser.name}</p>
-            <p className="text-blue-700 text-xs">{currentUser.role}</p>
-            <p className="text-blue-600 text-xs">{currentUser.department}</p>
+            <p className="font-medium text-blue-900 text-sm">{userRole.name}</p>
+            <p className="text-blue-700 text-xs">{userRole.role}</p>
+            <p className="text-blue-600 text-xs">{userRole.department}</p>
           </div>
         </div>
       )}
@@ -64,7 +71,7 @@ export const Sidebar = ({ activeTab, setActiveTab, currentUser, hasPermission }:
         <ul className="space-y-2">
           {visibleMenuItems.map((item) => {
             const Icon = item.icon;
-            const isDisabled = item.permission && hasPermission && !hasPermission(item.permission) && !hasPermission("view_only") && !hasPermission("all");
+            const isDisabled = item.permission && !hasPermission(item.permission);
             
             return (
               <li key={item.id}>

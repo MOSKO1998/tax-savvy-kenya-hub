@@ -17,34 +17,40 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/hooks/useAuth";
 
 interface HeaderProps {
-  currentUser?: any;
-  onLogout?: () => void;
+  userRole?: any;
 }
 
-export const Header = ({ currentUser, onLogout }: HeaderProps) => {
+export const Header = ({ userRole }: HeaderProps) => {
+  const { signOut } = useAuth();
+
   const getRoleColor = (role: string) => {
     switch (role) {
-      case "Admin": return "bg-red-100 text-red-800";
-      case "Tax Staff": return "bg-blue-100 text-blue-800";
-      case "Readonly": return "bg-gray-100 text-gray-800";
-      case "IT": return "bg-purple-100 text-purple-800";
+      case "admin": return "bg-red-100 text-red-800";
+      case "tax_staff": return "bg-blue-100 text-blue-800";
+      case "readonly": return "bg-gray-100 text-gray-800";
+      case "it_support": return "bg-purple-100 text-purple-800";
       default: return "bg-gray-100 text-gray-800";
     }
   };
 
   const getRoleIcon = (role: string) => {
     switch (role) {
-      case "Admin": return Shield;
-      case "Tax Staff": return CalendarIcon;
-      case "Readonly": return User;
-      case "IT": return Shield;
+      case "admin": return Shield;
+      case "tax_staff": return CalendarIcon;
+      case "readonly": return User;
+      case "it_support": return Shield;
       default: return User;
     }
   };
 
-  const RoleIcon = currentUser ? getRoleIcon(currentUser.role) : User;
+  const handleLogout = async () => {
+    await signOut();
+  };
+
+  const RoleIcon = userRole ? getRoleIcon(userRole.role) : User;
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
@@ -70,7 +76,7 @@ export const Header = ({ currentUser, onLogout }: HeaderProps) => {
           </Button>
 
           {/* User Menu */}
-          {currentUser && (
+          {userRole && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center space-x-2">
@@ -78,23 +84,23 @@ export const Header = ({ currentUser, onLogout }: HeaderProps) => {
                     <User className="h-4 w-4 text-blue-600" />
                   </div>
                   <div className="text-left">
-                    <p className="text-sm font-medium">{currentUser.name}</p>
-                    <p className="text-xs text-gray-500">{currentUser.email}</p>
+                    <p className="text-sm font-medium">{userRole.name}</p>
+                    <p className="text-xs text-gray-500">{userRole.email}</p>
                   </div>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-64">
                 <DropdownMenuLabel>
                   <div className="flex flex-col space-y-2">
-                    <p className="font-medium">{currentUser.name}</p>
-                    <p className="text-sm text-gray-500">{currentUser.email}</p>
+                    <p className="font-medium">{userRole.name}</p>
+                    <p className="text-sm text-gray-500">{userRole.email}</p>
                     <div className="flex items-center space-x-2">
-                      <Badge className={getRoleColor(currentUser.role)}>
+                      <Badge className={getRoleColor(userRole.role)}>
                         <RoleIcon className="h-3 w-3 mr-1" />
-                        {currentUser.role}
+                        {userRole.role}
                       </Badge>
                       <Badge variant="outline">
-                        {currentUser.department}
+                        {userRole.department}
                       </Badge>
                     </div>
                   </div>
@@ -109,7 +115,7 @@ export const Header = ({ currentUser, onLogout }: HeaderProps) => {
                   <span>Security</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={onLogout} className="text-red-600">
+                <DropdownMenuItem onClick={handleLogout} className="text-red-600">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Logout</span>
                 </DropdownMenuItem>
