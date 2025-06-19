@@ -42,18 +42,14 @@ export const useDocumentUpload = () => {
       if (data.description) formData.append('description', data.description);
       if (data.documentType) formData.append('documentType', data.documentType);
 
-      const response = await fetch(
-        `${supabase.supabaseUrl}/functions/v1/upload-to-nextcloud`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-          body: formData,
-        }
-      );
+      // Use supabase functions invoke instead of direct fetch
+      const { data: result, error } = await supabase.functions.invoke('upload-to-nextcloud', {
+        body: formData,
+      });
 
-      const result = await response.json();
+      if (error) {
+        throw error;
+      }
 
       if (result.success) {
         toast({

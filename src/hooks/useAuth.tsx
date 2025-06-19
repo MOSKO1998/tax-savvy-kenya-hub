@@ -2,6 +2,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { useSecurityMonitor } from './useSecurityMonitor';
 
 interface AuthContextType {
   user: User | null;
@@ -29,16 +30,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const { monitorFailedLogins, monitorSuccessfulLogin } = useSecurityMonitor();
 
   useEffect(() => {
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch user role and profile data
+          // Monitor successful login
+          monitorSuccessfulLogin(session.user.id);
+          
+          // Fetch user role and profile data with timeout
           setTimeout(async () => {
             try {
               const { data: profile } = await supabase
@@ -78,7 +82,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -91,11 +94,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { error };
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        monitorFailedLogins(email);
+      }
+      
+      return { error };
+    } catch (error) {
+      monitorFailedLogins(email);
+      return { error };
+    }
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {

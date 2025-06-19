@@ -1,62 +1,56 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { DashboardOverview } from "@/components/DashboardOverview";
 import { ClientManagement } from "@/components/ClientManagement";
+import { KenyaTaxObligations } from "@/components/KenyaTaxObligations";
 import { TaxCalendar } from "@/components/TaxCalendar";
 import { DocumentManager } from "@/components/DocumentManager";
 import { NotificationCenter } from "@/components/NotificationCenter";
-import { Settings } from "@/components/Settings";
 import { UserManagement } from "@/components/UserManagement";
+import { Settings } from "@/components/Settings";
+import { SecurityDashboard } from "@/components/SecurityDashboard";
 import { Sidebar } from "@/components/Sidebar";
 import { Header } from "@/components/Header";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
-  const { user, userRole, loading, signOut, hasPermission } = useAuth();
-  const navigate = useNavigate();
+  const { user, userRole, loading, hasPermission } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate("/auth");
+    if (user && userRole) {
+      toast({
+        title: "Welcome back!",
+        description: `Logged in as ${userRole.name} (${userRole.role})`,
+      });
     }
-  }, [user, loading, navigate]);
+  }, [user, userRole]);
 
-  const handleLogout = async () => {
-    await signOut();
-    navigate("/auth");
-  };
-
-  // Show loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-            <Calendar className="h-7 w-7 text-white animate-pulse" />
-          </div>
-          <p className="text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading Tax Compliance Hub...</p>
         </div>
       </div>
     );
   }
 
-  // Show login prompt if not authenticated
-  if (!user || !userRole) {
+  if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-6">
-            <Calendar className="h-10 w-10 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Tax Compliance Hub</h1>
-          <p className="text-gray-600 mb-8">Please sign in to access your dashboard</p>
-          <Button onClick={() => navigate("/auth")}>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Tax Compliance Hub</h1>
+          <p className="text-gray-600 mb-8">Please sign in to access the system</p>
+          <a
+            href="/auth"
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+          >
             Sign In
-          </Button>
+          </a>
         </div>
       </div>
     );
@@ -67,42 +61,33 @@ const Index = () => {
       case "dashboard":
         return <DashboardOverview />;
       case "clients":
-        if (!hasPermission("client_management") && !hasPermission("view_only")) {
-          return <div className="text-center py-12">
-            <p className="text-gray-500">You don't have permission to access this section.</p>
-          </div>;
-        }
-        return <ClientManagement />;
+        return hasPermission('client_management') || hasPermission('view_only') 
+          ? <ClientManagement /> 
+          : <div className="p-6 text-center text-red-600">Access Denied - Insufficient Permissions</div>;
+      case "obligations":
+        return hasPermission('tax_management') || hasPermission('view_only')
+          ? <KenyaTaxObligations />
+          : <div className="p-6 text-center text-red-600">Access Denied - Insufficient Permissions</div>;
       case "calendar":
-        if (!hasPermission("tax_management") && !hasPermission("view_only")) {
-          return <div className="text-center py-12">
-            <p className="text-gray-500">You don't have permission to access this section.</p>
-          </div>;
-        }
         return <TaxCalendar />;
       case "documents":
-        if (!hasPermission("document_view") && !hasPermission("view_only")) {
-          return <div className="text-center py-12">
-            <p className="text-gray-500">You don't have permission to access this section.</p>
-          </div>;
-        }
-        return <DocumentManager />;
+        return hasPermission('document_view') || hasPermission('view_only')
+          ? <DocumentManager />
+          : <div className="p-6 text-center text-red-600">Access Denied - Insufficient Permissions</div>;
       case "notifications":
         return <NotificationCenter />;
       case "users":
-        if (!hasPermission("user_management")) {
-          return <div className="text-center py-12">
-            <p className="text-gray-500">You don't have permission to access this section.</p>
-          </div>;
-        }
-        return <UserManagement />;
+        return hasPermission('user_management') || hasPermission('all')
+          ? <UserManagement />
+          : <div className="p-6 text-center text-red-600">Access Denied - Admin Only</div>;
+      case "security":
+        return hasPermission('system_settings') || hasPermission('all')
+          ? <SecurityDashboard />
+          : <div className="p-6 text-center text-red-600">Access Denied - Admin/IT Only</div>;
       case "settings":
-        if (!hasPermission("system_settings") && !hasPermission("all")) {
-          return <div className="text-center py-12">
-            <p className="text-gray-500">You don't have permission to access this section.</p>
-          </div>;
-        }
-        return <Settings />;
+        return hasPermission('system_settings') || hasPermission('all')
+          ? <Settings />
+          : <div className="p-6 text-center text-red-600">Access Denied - Admin/IT Only</div>;
       default:
         return <DashboardOverview />;
     }
@@ -110,16 +95,15 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab}
-        currentUser={userRole}
-        hasPermission={hasPermission}
-      />
-      <div className="flex-1 flex flex-col">
-        <Header currentUser={userRole} onLogout={handleLogout} />
-        <main className="flex-1 p-6">
-          {renderContent()}
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} userRole={userRole} />
+      
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header userRole={userRole} />
+        
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50">
+          <div className="container mx-auto px-6 py-8">
+            {renderContent()}
+          </div>
         </main>
       </div>
     </div>
