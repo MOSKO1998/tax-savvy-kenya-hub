@@ -1,5 +1,7 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 import { 
   User, 
   Plus, 
@@ -20,82 +23,42 @@ import {
   FileText
 } from "lucide-react";
 
-interface User {
-  id: number;
-  name: string;
+interface UserProfile {
+  id: string;
   email: string;
-  role: string;
-  department: string;
-  status: 'Active' | 'Inactive';
-  permissions: string[];
-  createdAt: string;
+  full_name: string;
+  user_roles?: {
+    role: string;
+    department: string;
+    status: string;
+    permissions: string[];
+  };
+  created_at: string;
 }
 
 export const UserManagement = () => {
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: 1,
-      name: "John Admin",
-      email: "admin@taxtrucker.com",
-      role: "Admin",
-      department: "Management",
-      status: "Active",
-      permissions: ["all"],
-      createdAt: "2024-01-15"
-    },
-    {
-      id: 2,
-      name: "Jane Tax Officer",
-      email: "taxstaff@taxtrucker.com",
-      role: "Tax Staff",
-      department: "Tax",
-      status: "Active",
-      permissions: ["tax_management", "client_management", "document_view"],
-      createdAt: "2024-02-10"
-    },
-    {
-      id: 3,
-      name: "Mike Viewer",
-      email: "readonly@taxtrucker.com",
-      role: "Readonly",
-      department: "Audit",
-      status: "Active",
-      permissions: ["view_only"],
-      createdAt: "2024-02-20"
-    },
-    {
-      id: 4,
-      name: "Sarah IT Support",
-      email: "it@taxtrucker.com",
-      role: "IT",
-      department: "IT",
-      status: "Active",
-      permissions: ["system_settings", "user_management"],
-      createdAt: "2024-01-30"
-    }
-  ]);
-
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRole, setSelectedRole] = useState("all");
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+  const { toast } = useToast();
 
   const [newUser, setNewUser] = useState({
-    name: "",
-    email: "",
     role: "",
     department: "",
     permissions: [] as string[]
   });
 
   const roles = [
-    { value: "Admin", label: "Admin", permissions: ["all"] },
-    { value: "Tax Staff", label: "Tax Staff", permissions: ["tax_management", "client_management", "document_view"] },
-    { value: "Readonly", label: "Readonly", permissions: ["view_only"] },
-    { value: "IT", label: "IT", permissions: ["system_settings", "user_management"] }
+    { value: "admin", label: "Admin", permissions: ["all"] },
+    { value: "tax_staff", label: "Tax Staff", permissions: ["tax_management", "client_management", "document_view"] },
+    { value: "readonly", label: "Readonly", permissions: ["view_only"] },
+    { value: "it", label: "IT", permissions: ["system_settings", "user_management"] }
   ];
 
-  const departments = ["Management", "Tax", "Audit", "IT", "Finance", "Legal"];
+  const departments = ["management", "tax", "audit", "it", "finance", "legal"];
 
   const permissionsList = [
     { id: "all", label: "Full Access", icon: Shield },
@@ -107,36 +70,85 @@ export const UserManagement = () => {
     { id: "view_only", label: "View Only", icon: Eye }
   ];
 
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          email,
+          full_name,
+          created_at,
+          user_roles (
+            role,
+            department,
+            status,
+            permissions
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setUsers(data || []);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch users",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = selectedRole === "all" || user.role === selectedRole;
+    const matchesSearch = user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRole = selectedRole === "all" || user.user_roles?.role === selectedRole;
     return matchesSearch && matchesRole;
   });
 
-  const handleAddUser = () => {
-    const roleData = roles.find(r => r.value === newUser.role);
-    const user: User = {
-      id: users.length + 1,
-      ...newUser,
-      status: "Active",
-      permissions: roleData?.permissions || [],
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-    
-    setUsers([...users, user]);
-    setNewUser({ name: "", email: "", role: "", department: "", permissions: [] });
-    setIsAddUserOpen(false);
+  const handleUpdateUserRole = async (userId: string, roleData: any) => {
+    try {
+      const { error } = await supabase
+        .from('user_roles')
+        .upsert({
+          user_id: userId,
+          role: roleData.role,
+          department: roleData.department,
+          permissions: roleData.permissions,
+          status: 'active'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "User role updated successfully",
+      });
+
+      fetchUsers();
+      setEditingUser(null);
+      setNewUser({ role: "", department: "", permissions: [] });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update user role",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleEditUser = (user: User) => {
+  const handleEditUser = (user: UserProfile) => {
     setEditingUser(user);
     setNewUser({
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      department: user.department,
-      permissions: user.permissions
+      role: user.user_roles?.role || "",
+      department: user.user_roles?.department || "",
+      permissions: user.user_roles?.permissions || []
     });
   };
 
@@ -144,65 +156,51 @@ export const UserManagement = () => {
     if (!editingUser) return;
     
     const roleData = roles.find(r => r.value === newUser.role);
-    const updatedUser: User = {
-      ...editingUser,
-      ...newUser,
+    handleUpdateUserRole(editingUser.id, {
+      role: newUser.role,
+      department: newUser.department,
       permissions: roleData?.permissions || []
-    };
+    });
+  };
+
+  const toggleUserStatus = async (userId: string, currentStatus: string) => {
+    const newStatus = currentStatus === "active" ? "inactive" : "active";
     
-    setUsers(users.map(u => u.id === editingUser.id ? updatedUser : u));
-    setEditingUser(null);
-    setNewUser({ name: "", email: "", role: "", department: "", permissions: [] });
-  };
+    try {
+      const { error } = await supabase
+        .from('user_roles')
+        .update({ status: newStatus })
+        .eq('user_id', userId);
 
-  const handleDeleteUser = (id: number) => {
-    if (confirm("Are you sure you want to delete this user?")) {
-      setUsers(users.filter(u => u.id !== id));
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `User ${newStatus === "active" ? "activated" : "deactivated"} successfully`,
+      });
+
+      fetchUsers();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update user status",
+        variant: "destructive",
+      });
     }
-  };
-
-  const toggleUserStatus = (id: number) => {
-    setUsers(users.map(u => 
-      u.id === id 
-        ? { ...u, status: u.status === "Active" ? "Inactive" : "Active" as 'Active' | 'Inactive' }
-        : u
-    ));
   };
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case "Admin": return "bg-red-100 text-red-800";
-      case "Tax Staff": return "bg-blue-100 text-blue-800";
-      case "Readonly": return "bg-gray-100 text-gray-800";
-      case "IT": return "bg-purple-100 text-purple-800";
+      case "admin": return "bg-red-100 text-red-800";
+      case "tax_staff": return "bg-blue-100 text-blue-800";
+      case "readonly": return "bg-gray-100 text-gray-800";
+      case "it": return "bg-purple-100 text-purple-800";
       default: return "bg-gray-100 text-gray-800";
     }
   };
 
   const UserForm = () => (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="name">Full Name</Label>
-          <Input
-            id="name"
-            value={newUser.name}
-            onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-            placeholder="Enter full name"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="email">Email Address</Label>
-          <Input
-            id="email"
-            type="email"
-            value={newUser.email}
-            onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-            placeholder="Enter email address"
-          />
-        </div>
-      </div>
-      
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Role</Label>
@@ -228,7 +226,7 @@ export const UserManagement = () => {
             <SelectContent>
               {departments.map(dept => (
                 <SelectItem key={dept} value={dept}>
-                  {dept}
+                  {dept.charAt(0).toUpperCase() + dept.slice(1)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -259,19 +257,28 @@ export const UserManagement = () => {
         <Button 
           variant="outline" 
           onClick={() => {
-            setIsAddUserOpen(false);
             setEditingUser(null);
-            setNewUser({ name: "", email: "", role: "", department: "", permissions: [] });
+            setNewUser({ role: "", department: "", permissions: [] });
           }}
         >
           Cancel
         </Button>
-        <Button onClick={editingUser ? handleUpdateUser : handleAddUser}>
-          {editingUser ? "Update User" : "Add User"}
+        <Button onClick={handleUpdateUser}>
+          Update User
         </Button>
       </div>
     </div>
   );
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-12">
+          <p className="text-gray-500">Loading users...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -280,26 +287,6 @@ export const UserManagement = () => {
           <h2 className="text-3xl font-bold text-gray-900">User Management</h2>
           <p className="text-gray-600 mt-1">Manage system users, roles, and permissions</p>
         </div>
-        <Dialog open={isAddUserOpen || !!editingUser} onOpenChange={(open) => {
-          if (!open) {
-            setIsAddUserOpen(false);
-            setEditingUser(null);
-            setNewUser({ name: "", email: "", role: "", department: "", permissions: [] });
-          }
-        }}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setIsAddUserOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add New User
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>{editingUser ? "Edit User" : "Add New User"}</DialogTitle>
-            </DialogHeader>
-            <UserForm />
-          </DialogContent>
-        </Dialog>
       </div>
 
       {/* Stats Cards */}
@@ -320,7 +307,9 @@ export const UserManagement = () => {
             <div className="flex items-center space-x-2">
               <Shield className="h-8 w-8 text-green-600" />
               <div>
-                <p className="text-2xl font-bold">{users.filter(u => u.status === "Active").length}</p>
+                <p className="text-2xl font-bold">
+                  {users.filter(u => u.user_roles?.status === "active").length}
+                </p>
                 <p className="text-sm text-gray-600">Active Users</p>
               </div>
             </div>
@@ -331,7 +320,9 @@ export const UserManagement = () => {
             <div className="flex items-center space-x-2">
               <User className="h-8 w-8 text-purple-600" />
               <div>
-                <p className="text-2xl font-bold">{users.filter(u => u.role === "Admin").length}</p>
+                <p className="text-2xl font-bold">
+                  {users.filter(u => u.user_roles?.role === "admin").length}
+                </p>
                 <p className="text-sm text-gray-600">Administrators</p>
               </div>
             </div>
@@ -399,25 +390,25 @@ export const UserManagement = () => {
                   </div>
                   <div>
                     <div className="flex items-center space-x-2">
-                      <h3 className="font-medium">{user.name}</h3>
+                      <h3 className="font-medium">{user.full_name}</h3>
                       <Badge 
-                        variant={user.status === "Active" ? "default" : "destructive"}
+                        variant={user.user_roles?.status === "active" ? "default" : "destructive"}
                         className="text-xs"
                       >
-                        {user.status}
+                        {user.user_roles?.status || "Unknown"}
                       </Badge>
                     </div>
                     <p className="text-sm text-gray-600">{user.email}</p>
                     <div className="flex items-center space-x-2 mt-1">
-                      <Badge className={getRoleColor(user.role)}>
-                        {user.role}
+                      <Badge className={getRoleColor(user.user_roles?.role || "")}>
+                        {user.user_roles?.role || "No Role"}
                       </Badge>
                       <Badge variant="outline">
-                        {user.department}
+                        {user.user_roles?.department || "No Department"}
                       </Badge>
                     </div>
                     <div className="flex flex-wrap gap-1 mt-2">
-                      {user.permissions.slice(0, 3).map(permission => {
+                      {user.user_roles?.permissions?.slice(0, 3).map(permission => {
                         const permissionData = permissionsList.find(p => p.id === permission);
                         return permissionData ? (
                           <Badge key={permission} variant="secondary" className="text-xs">
@@ -425,9 +416,9 @@ export const UserManagement = () => {
                           </Badge>
                         ) : null;
                       })}
-                      {user.permissions.length > 3 && (
+                      {(user.user_roles?.permissions?.length || 0) > 3 && (
                         <Badge variant="secondary" className="text-xs">
-                          +{user.permissions.length - 3} more
+                          +{(user.user_roles?.permissions?.length || 0) - 3} more
                         </Badge>
                       )}
                     </div>
@@ -437,24 +428,32 @@ export const UserManagement = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => toggleUserStatus(user.id)}
+                    onClick={() => toggleUserStatus(user.id, user.user_roles?.status || "active")}
                   >
-                    {user.status === "Active" ? "Deactivate" : "Activate"}
+                    {user.user_roles?.status === "active" ? "Deactivate" : "Activate"}
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEditUser(user)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDeleteUser(user.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <Dialog open={editingUser?.id === user.id} onOpenChange={(open) => {
+                    if (!open) {
+                      setEditingUser(null);
+                      setNewUser({ role: "", department: "", permissions: [] });
+                    }
+                  }}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditUser(user)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl">
+                      <DialogHeader>
+                        <DialogTitle>Edit User: {user.full_name}</DialogTitle>
+                      </DialogHeader>
+                      <UserForm />
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </div>
             ))}

@@ -1,5 +1,7 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { DashboardOverview } from "@/components/DashboardOverview";
 import { ClientManagement } from "@/components/ClientManagement";
 import { TaxCalendar } from "@/components/TaxCalendar";
@@ -7,70 +9,86 @@ import { DocumentManager } from "@/components/DocumentManager";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { Settings } from "@/components/Settings";
 import { UserManagement } from "@/components/UserManagement";
-import { Login } from "@/components/Login";
 import { Sidebar } from "@/components/Sidebar";
 import { Header } from "@/components/Header";
-
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-  department: string;
-  permissions: string[];
-}
+import { Button } from "@/components/ui/button";
+import { Calendar } from "lucide-react";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const { user, userRole, loading, signOut, hasPermission } = useAuth();
+  const navigate = useNavigate();
 
-  const handleLogin = (user: User) => {
-    setCurrentUser(user);
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate("/auth");
+    }
+  }, [user, loading, navigate]);
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/auth");
   };
 
-  const handleLogout = () => {
-    setCurrentUser(null);
-    setActiveTab("dashboard");
-  };
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
+            <Calendar className="h-7 w-7 text-white animate-pulse" />
+          </div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
-  // Check if user has permission to access a feature
-  const hasPermission = (permission: string) => {
-    if (!currentUser) return false;
-    if (currentUser.permissions.includes("all")) return true;
-    return currentUser.permissions.includes(permission);
-  };
-
-  if (!currentUser) {
-    return <Login onLogin={handleLogin} />;
+  // Show login prompt if not authenticated
+  if (!user || !userRole) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-6">
+            <Calendar className="h-10 w-10 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Tax Compliance Hub</h1>
+          <p className="text-gray-600 mb-8">Please sign in to access your dashboard</p>
+          <Button onClick={() => navigate("/auth")}>
+            Sign In
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard":
-        return <DashboardOverview currentUser={currentUser} />;
+        return <DashboardOverview />;
       case "clients":
         if (!hasPermission("client_management") && !hasPermission("view_only")) {
           return <div className="text-center py-12">
             <p className="text-gray-500">You don't have permission to access this section.</p>
           </div>;
         }
-        return <ClientManagement currentUser={currentUser} />;
+        return <ClientManagement />;
       case "calendar":
         if (!hasPermission("tax_management") && !hasPermission("view_only")) {
           return <div className="text-center py-12">
             <p className="text-gray-500">You don't have permission to access this section.</p>
           </div>;
         }
-        return <TaxCalendar currentUser={currentUser} />;
+        return <TaxCalendar />;
       case "documents":
         if (!hasPermission("document_view") && !hasPermission("view_only")) {
           return <div className="text-center py-12">
             <p className="text-gray-500">You don't have permission to access this section.</p>
           </div>;
         }
-        return <DocumentManager currentUser={currentUser} />;
+        return <DocumentManager />;
       case "notifications":
-        return <NotificationCenter currentUser={currentUser} />;
+        return <NotificationCenter />;
       case "users":
         if (!hasPermission("user_management")) {
           return <div className="text-center py-12">
@@ -84,9 +102,9 @@ const Index = () => {
             <p className="text-gray-500">You don't have permission to access this section.</p>
           </div>;
         }
-        return <Settings currentUser={currentUser} />;
+        return <Settings />;
       default:
-        return <DashboardOverview currentUser={currentUser} />;
+        return <DashboardOverview />;
     }
   };
 
@@ -95,11 +113,11 @@ const Index = () => {
       <Sidebar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab}
-        currentUser={currentUser}
+        currentUser={userRole}
         hasPermission={hasPermission}
       />
       <div className="flex-1 flex flex-col">
-        <Header currentUser={currentUser} onLogout={handleLogout} />
+        <Header currentUser={userRole} onLogout={handleLogout} />
         <main className="flex-1 p-6">
           {renderContent()}
         </main>
