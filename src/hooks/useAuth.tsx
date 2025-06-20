@@ -10,7 +10,7 @@ interface AuthContextType {
   userRole: any | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, fullName: string, metadata?: any) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
 }
@@ -64,9 +64,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   id: profile.id,
                   name: profile.full_name,
                   email: profile.email,
-                  role: profile.user_roles?.role || 'readonly',
-                  department: profile.user_roles?.department || 'tax',
-                  permissions: profile.user_roles?.permissions || ['view_only'],
+                  username: profile.username,
+                  companyName: profile.company_name,
+                  role: profile.user_roles?.role || 'admin',
+                  department: profile.user_roles?.department || 'management',
+                  permissions: profile.user_roles?.permissions || ['all'],
                   status: profile.user_roles?.status || 'active'
                 });
               }
@@ -111,7 +113,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (email: string, password: string, fullName: string, metadata: any = {}) => {
     const redirectUrl = `${window.location.origin}/`;
     
     const { error } = await supabase.auth.signUp({
@@ -121,6 +123,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         emailRedirectTo: redirectUrl,
         data: {
           full_name: fullName,
+          username: metadata.username,
+          company_name: metadata.company_name,
         },
       },
     });

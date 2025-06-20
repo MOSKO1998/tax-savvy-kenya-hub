@@ -50,11 +50,76 @@ export type Database = {
           },
         ]
       }
+      calendar_events: {
+        Row: {
+          client_id: string | null
+          created_at: string | null
+          created_by: string
+          description: string | null
+          end_date: string | null
+          event_type: string | null
+          id: string
+          obligation_id: string | null
+          start_date: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          end_date?: string | null
+          event_type?: string | null
+          id?: string
+          obligation_id?: string | null
+          start_date: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          end_date?: string | null
+          event_type?: string | null
+          id?: string
+          obligation_id?: string | null
+          start_date?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_events_obligation_id_fkey"
+            columns: ["obligation_id"]
+            isOneToOne: false
+            referencedRelation: "tax_obligations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           address: string | null
           assigned_to: string | null
           client_type: string | null
+          company_id: string | null
           created_at: string | null
           created_by: string
           email: string | null
@@ -69,6 +134,7 @@ export type Database = {
           address?: string | null
           assigned_to?: string | null
           client_type?: string | null
+          company_id?: string | null
           created_at?: string | null
           created_by: string
           email?: string | null
@@ -83,6 +149,7 @@ export type Database = {
           address?: string | null
           assigned_to?: string | null
           client_type?: string | null
+          company_id?: string | null
           created_at?: string | null
           created_by?: string
           email?: string | null
@@ -102,7 +169,61 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "clients_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "clients_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      companies: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          created_by: string
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          registration_number: string | null
+          tax_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string | null
+          created_by: string
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          registration_number?: string | null
+          tax_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string | null
+          created_by?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          registration_number?: string | null
+          tax_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "companies_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -220,25 +341,31 @@ export type Database = {
       }
       profiles: {
         Row: {
+          company_name: string | null
           created_at: string | null
           email: string
           full_name: string
           id: string
           updated_at: string | null
+          username: string | null
         }
         Insert: {
+          company_name?: string | null
           created_at?: string | null
           email: string
           full_name: string
           id: string
           updated_at?: string | null
+          username?: string | null
         }
         Update: {
+          company_name?: string | null
           created_at?: string | null
           email?: string
           full_name?: string
           id?: string
           updated_at?: string | null
+          username?: string | null
         }
         Relationships: []
       }

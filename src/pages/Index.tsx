@@ -12,6 +12,7 @@ import { Settings } from "@/components/Settings";
 import { SecurityDashboard } from "@/components/SecurityDashboard";
 import { Sidebar } from "@/components/Sidebar";
 import { Header } from "@/components/Header";
+import { Login } from "@/components/Login";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
@@ -40,26 +41,17 @@ const Index = () => {
   }
 
   if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Tax Compliance Hub</h1>
-          <p className="text-gray-600 mb-8">Please sign in to access the system</p>
-          <a
-            href="/auth"
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Sign In
-          </a>
-        </div>
-      </div>
-    );
+    return <Login />;
   }
+
+  const handleQuickAction = (action: string) => {
+    setActiveTab(action);
+  };
 
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard":
-        return <DashboardOverview />;
+        return <DashboardOverview onQuickAction={handleQuickAction} userRole={userRole} />;
       case "clients":
         return hasPermission('client_management') || hasPermission('view_only') 
           ? <ClientManagement /> 
@@ -89,7 +81,7 @@ const Index = () => {
           ? <Settings />
           : <div className="p-6 text-center text-red-600">Access Denied - Admin/IT Only</div>;
       default:
-        return <DashboardOverview />;
+        return <DashboardOverview onQuickAction={handleQuickAction} userRole={userRole} />;
     }
   };
 
