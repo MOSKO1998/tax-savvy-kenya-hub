@@ -4,6 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { demoDataService } from "@/services/demoDataService";
 import { 
   Plus, 
   Search, 
@@ -12,7 +19,8 @@ import {
   Building,
   Calendar,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Save
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -23,53 +31,47 @@ import {
 
 export const ClientManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [isAddClientOpen, setIsAddClientOpen] = useState(false);
+  const [newClient, setNewClient] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    tax_id: "",
+    client_type: "individual"
+  });
+  const { toast } = useToast();
+  const { isDemoMode } = useAuth();
 
-  const clients = [
-    {
-      id: 1,
-      name: "ABC Manufacturing Ltd",
-      pin: "P051234567X",
-      yearEnd: "2023-12-31",
-      status: "active",
-      compliance: "good",
-      nextDeadline: "VAT Return - Jan 20, 2024",
-      accountant: "John Kamau",
-      address: "Nairobi, Kenya"
-    },
-    {
-      id: 2,
-      name: "XYZ Services Ltd",
-      pin: "P051234568Y",
-      yearEnd: "2024-03-31",
-      status: "active",
-      compliance: "warning",
-      nextDeadline: "PAYE Return - Jan 22, 2024",
-      accountant: "Mary Wanjiku",
-      address: "Mombasa, Kenya"
-    },
-    {
-      id: 3,
-      name: "Kenya Exports Co.",
-      pin: "P051234569Z",
-      yearEnd: "2023-06-30",
-      status: "active",
-      compliance: "critical",
-      nextDeadline: "Corporation Tax - Jan 25, 2024",
-      accountant: "Peter Mwangi",
-      address: "Kisumu, Kenya"
-    },
-    {
-      id: 4,
-      name: "Tech Solutions Ltd",
-      pin: "P051234570A",
-      yearEnd: "2023-12-31",
-      status: "inactive",
-      compliance: "good",
-      nextDeadline: "Withholding Tax - Jan 28, 2024",
-      accountant: "Jane Achieng",
-      address: "Nakuru, Kenya"
+  // Use demo data for demo mode, empty array for real users
+  const clients = isDemoMode ? demoDataService.getDemoClients() : [];
+
+  const handleAddClient = () => {
+    if (!newClient.name || !newClient.email) {
+      toast({
+        title: "Error",
+        description: "Please fill in required fields (Name and Email)",
+        variant: "destructive",
+      });
+      return;
     }
-  ];
+
+    toast({
+      title: "Client Added",
+      description: `${newClient.name} has been added successfully.`,
+    });
+
+    // Reset form
+    setNewClient({
+      name: "",
+      email: "",
+      phone: "",
+      address: "",
+      tax_id: "",
+      client_type: "individual"
+    });
+    setIsAddClientOpen(false);
+  };
 
   const getComplianceColor = (compliance: string) => {
     switch (compliance) {
@@ -98,23 +100,113 @@ export const ClientManagement = () => {
 
   const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.pin.toLowerCase().includes(searchTerm.toLowerCase())
+    client.tax_id?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold text-gray-900">Client Management</h2>
-        <Button className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="h-4 w-4 mr-2" />
-          Add New Client
-        </Button>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">Client Management</h2>
+        <Dialog open={isAddClientOpen} onOpenChange={setIsAddClientOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
+              <Plus className="h-4 w-4 mr-2" />
+              Add New Client
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Add New Client</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="client-name">Client Name *</Label>
+                  <Input
+                    id="client-name"
+                    value={newClient.name}
+                    onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
+                    placeholder="Enter client name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="client-type">Client Type</Label>
+                  <Select 
+                    value={newClient.client_type} 
+                    onValueChange={(value) => setNewClient({ ...newClient, client_type: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="individual">Individual</SelectItem>
+                      <SelectItem value="corporate">Corporate</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="client-email">Email Address *</Label>
+                  <Input
+                    id="client-email"
+                    type="email"
+                    value={newClient.email}
+                    onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
+                    placeholder="Enter email address"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="client-phone">Phone Number</Label>
+                  <Input
+                    id="client-phone"
+                    value={newClient.phone}
+                    onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
+                    placeholder="Enter phone number"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="client-tax-id">KRA PIN / Tax ID</Label>
+                <Input
+                  id="client-tax-id"
+                  value={newClient.tax_id}
+                  onChange={(e) => setNewClient({ ...newClient, tax_id: e.target.value })}
+                  placeholder="e.g., P051234567X"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="client-address">Address</Label>
+                <Textarea
+                  id="client-address"
+                  value={newClient.address}
+                  onChange={(e) => setNewClient({ ...newClient, address: e.target.value })}
+                  placeholder="Enter client address"
+                  rows={3}
+                />
+              </div>
+              
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button variant="outline" onClick={() => setIsAddClientOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleAddClient} className="bg-green-600 hover:bg-green-700">
+                  <Save className="h-4 w-4 mr-2" />
+                  Add Client
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Search and Filter */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex space-x-4">
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -124,7 +216,7 @@ export const ClientManagement = () => {
                 className="pl-10"
               />
             </div>
-            <Button variant="outline">
+            <Button variant="outline" className="w-full sm:w-auto">
               <Filter className="h-4 w-4 mr-2" />
               Filter
             </Button>
@@ -133,9 +225,9 @@ export const ClientManagement = () => {
       </Card>
 
       {/* Clients Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredClients.map((client) => (
-          <Card key={client.id} className="hover:shadow-md transition-shadow">
+          <Card key={client.id} className="hover:shadow-lg transition-shadow">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-2">
@@ -161,15 +253,15 @@ export const ClientManagement = () => {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">KRA PIN:</span>
-                  <span className="text-sm font-mono">{client.pin}</span>
+                  <span className="text-sm font-mono">{client.tax_id}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Year End:</span>
-                  <span className="text-sm">{client.yearEnd}</span>
+                  <span className="text-sm text-gray-600">Type:</span>
+                  <span className="text-sm capitalize">{client.client_type}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Accountant:</span>
-                  <span className="text-sm">{client.accountant}</span>
+                  <span className="text-sm text-gray-600">Email:</span>
+                  <span className="text-sm">{client.email}</span>
                 </div>
               </div>
 
@@ -179,18 +271,6 @@ export const ClientManagement = () => {
                 >
                   {client.status}
                 </Badge>
-                <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs ${getComplianceColor(client.compliance)}`}>
-                  {getComplianceIcon(client.compliance)}
-                  <span className="capitalize">{client.compliance}</span>
-                </div>
-              </div>
-
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <Calendar className="h-4 w-4 text-orange-500" />
-                  <span className="text-sm font-medium">Next Deadline:</span>
-                </div>
-                <p className="text-sm text-gray-600 mt-1">{client.nextDeadline}</p>
               </div>
             </CardContent>
           </Card>
@@ -200,7 +280,19 @@ export const ClientManagement = () => {
       {filteredClients.length === 0 && (
         <Card>
           <CardContent className="p-12 text-center">
-            <p className="text-gray-500">No clients found matching your search criteria.</p>
+            <Building className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500 mb-4">
+              {isDemoMode 
+                ? "Demo data will appear here when you log in with demo credentials." 
+                : "No clients found. Add your first client to get started."
+              }
+            </p>
+            {!isDemoMode && (
+              <Button onClick={() => setIsAddClientOpen(true)} className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Your First Client
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}

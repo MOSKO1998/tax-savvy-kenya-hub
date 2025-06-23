@@ -1,196 +1,246 @@
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, AlertTriangle, Calendar, Users } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { AddTaxObligation } from "@/components/AddTaxObligation";
+import { useAuth } from "@/hooks/useAuth";
+import { demoDataService } from "@/services/demoDataService";
+import { 
+  Plus, 
+  Search, 
+  Filter,
+  Calendar,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  DollarSign
+} from "lucide-react";
 
 export const KenyaTaxObligations = () => {
-  const kenyaObligations = [
-    {
-      id: 1,
-      title: "PAYE Returns",
-      description: "Pay As You Earn tax returns for employees",
-      dueDate: "9th of every month",
-      frequency: "Monthly",
-      authority: "KRA",
-      penalty: "25% of tax due or KES 10,000 (whichever is higher)",
-      status: "upcoming",
-      affectedClients: 15,
-      nextDue: "2024-01-09"
-    },
-    {
-      id: 2,
-      title: "VAT Returns",
-      description: "Value Added Tax returns for registered businesses",
-      dueDate: "20th of every month",
-      frequency: "Monthly", 
-      authority: "KRA",
-      penalty: "5% of tax due per month or KES 10,000 (whichever is higher)",
-      status: "critical",
-      affectedClients: 8,
-      nextDue: "2024-01-20"
-    },
-    {
-      id: 3,
-      title: "Withholding Tax",
-      description: "Tax withheld on payments to suppliers and service providers",
-      dueDate: "20th of every month",
-      frequency: "Monthly",
-      authority: "KRA", 
-      penalty: "25% of tax due",
-      status: "pending",
-      affectedClients: 12,
-      nextDue: "2024-01-20"
-    },
-    {
-      id: 4,
-      title: "Corporation Tax",
-      description: "Tax on company profits",
-      dueDate: "6 months after year end",
-      frequency: "Annual",
-      authority: "KRA",
-      penalty: "20% of tax due + 2% per month",
-      status: "upcoming",
-      affectedClients: 25,
-      nextDue: "2024-06-30"
-    },
-    {
-      id: 5,
-      title: "Annual Return (CR12)",
-      description: "Annual return filed with Registrar of Companies",
-      dueDate: "Within 42 days after AGM",
-      frequency: "Annual",
-      authority: "Registrar of Companies",
-      penalty: "KES 5,000 + KES 100 per day of delay",
-      status: "upcoming",
-      affectedClients: 25,
-      nextDue: "2024-03-15"
-    },
-    {
-      id: 6,
-      title: "NSSF Returns",
-      description: "National Social Security Fund contributions",
-      dueDate: "15th of every month",
-      frequency: "Monthly",
-      authority: "NSSF",
-      penalty: "25% of contribution due",
-      status: "upcoming",
-      affectedClients: 15,
-      nextDue: "2024-01-15"
-    },
-    {
-      id: 7,
-      title: "NHIF Returns",
-      description: "National Hospital Insurance Fund contributions",
-      dueDate: "15th of every month", 
-      frequency: "Monthly",
-      authority: "NHIF",
-      penalty: "25% of contribution due",
-      status: "upcoming",
-      affectedClients: 15,
-      nextDue: "2024-01-15"
-    },
-    {
-      id: 8,
-      title: "Rental Income Tax",
-      description: "Tax on rental income from property",
-      dueDate: "20th of every month",
-      frequency: "Monthly",
-      authority: "KRA",
-      penalty: "25% of tax due",
-      status: "pending",
-      affectedClients: 5,
-      nextDue: "2024-01-20"
-    }
-  ];
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const { isDemoMode } = useAuth();
+
+  // Use demo data for demo mode, empty array for real users
+  const obligations = isDemoMode ? demoDataService.getDemoTaxObligations() : [];
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'critical':
-        return 'bg-red-100 text-red-800';
-      case 'upcoming':
-        return 'bg-orange-100 text-orange-800';
-      case 'pending':
-        return 'bg-blue-100 text-blue-800';
+      case "completed":
+        return "bg-green-100 text-green-800";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "overdue":
+        return "bg-red-100 text-red-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'critical':
-        return <AlertTriangle className="h-4 w-4 text-red-600" />;
-      case 'upcoming':
-        return <Calendar className="h-4 w-4 text-orange-600" />;
+      case "completed":
+        return <CheckCircle className="h-4 w-4" />;
+      case "pending":
+        return <Clock className="h-4 w-4" />;
+      case "overdue":
+        return <AlertTriangle className="h-4 w-4" />;
       default:
-        return <Calendar className="h-4 w-4 text-blue-600" />;
+        return <Clock className="h-4 w-4" />;
     }
+  };
+
+  const filteredObligations = obligations.filter(obligation => {
+    const matchesSearch = obligation.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         obligation.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = filterStatus === "all" || obligation.status === filterStatus;
+    return matchesSearch && matchesFilter;
+  });
+
+  const statusCounts = {
+    all: obligations.length,
+    pending: obligations.filter(o => o.status === "pending").length,
+    overdue: obligations.filter(o => o.status === "overdue").length,
+    completed: obligations.filter(o => o.status === "completed").length,
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-2xl font-bold text-gray-900">Kenya Tax Obligations</h3>
-          <p className="text-gray-600">Comprehensive list of tax obligations in Kenya</p>
-        </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Custom Obligation
-        </Button>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">Kenya Tax Obligations</h2>
+        <AddTaxObligation 
+          trigger={
+            <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
+              <Plus className="h-4 w-4 mr-2" />
+              Add New Obligation
+            </Button>
+          }
+        />
       </div>
 
-      <div className="grid gap-4">
-        {kenyaObligations.map((obligation) => (
-          <Card key={obligation.id} className="border-l-4 border-l-blue-500">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex items-start space-x-3">
-                  {getStatusIcon(obligation.status)}
-                  <div>
-                    <CardTitle className="text-lg">{obligation.title}</CardTitle>
-                    <p className="text-sm text-gray-600 mt-1">{obligation.description}</p>
+      {/* Status Overview Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setFilterStatus("all")}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total</p>
+                <p className="text-2xl font-bold">{statusCounts.all}</p>
+              </div>
+              <DollarSign className="h-8 w-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setFilterStatus("pending")}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Pending</p>
+                <p className="text-2xl font-bold text-yellow-600">{statusCounts.pending}</p>
+              </div>
+              <Clock className="h-8 w-8 text-yellow-600" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setFilterStatus("overdue")}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Overdue</p>
+                <p className="text-2xl font-bold text-red-600">{statusCounts.overdue}</p>
+              </div>
+              <AlertTriangle className="h-8 w-8 text-red-600" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setFilterStatus("completed")}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Completed</p>
+                <p className="text-2xl font-bold text-green-600">{statusCounts.completed}</p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Search and Filter */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search obligations..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex space-x-2">
+              <Button 
+                variant={filterStatus === "all" ? "default" : "outline"}
+                onClick={() => setFilterStatus("all")}
+                className="w-full sm:w-auto"
+              >
+                All
+              </Button>
+              <Button 
+                variant={filterStatus === "pending" ? "default" : "outline"}
+                onClick={() => setFilterStatus("pending")}
+                className="w-full sm:w-auto"
+              >
+                Pending
+              </Button>
+              <Button 
+                variant={filterStatus === "overdue" ? "default" : "outline"}
+                onClick={() => setFilterStatus("overdue")}
+                className="w-full sm:w-auto"
+              >
+                Overdue
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Obligations List */}
+      <div className="space-y-4">
+        {filteredObligations.map((obligation) => (
+          <Card key={obligation.id} className="hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between space-y-4 lg:space-y-0">
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <h3 className="text-lg font-semibold">{obligation.title}</h3>
+                    <Badge className={getStatusColor(obligation.status)}>
+                      <div className="flex items-center space-x-1">
+                        {getStatusIcon(obligation.status)}
+                        <span className="capitalize">{obligation.status}</span>
+                      </div>
+                    </Badge>
+                  </div>
+                  <p className="text-gray-600">{obligation.description}</p>
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                    <div className="flex items-center space-x-1">
+                      <Calendar className="h-4 w-4" />
+                      <span>Due: {obligation.due_date}</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <DollarSign className="h-4 w-4" />
+                      <span>Amount: KES {obligation.amount?.toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span>Type: {obligation.tax_type.replace('_', ' ').toUpperCase()}</span>
+                    </div>
                   </div>
                 </div>
-                <Badge className={getStatusColor(obligation.status)}>
-                  {obligation.status}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Due Date</p>
-                  <p className="text-sm text-gray-600">{obligation.dueDate}</p>
-                  <p className="text-xs text-gray-500">Next: {obligation.nextDue}</p>
+                <div className="flex space-x-2">
+                  <Button variant="outline" size="sm">
+                    View Details
+                  </Button>
+                  {obligation.status !== "completed" && (
+                    <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                      Mark Complete
+                    </Button>
+                  )}
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Authority</p>
-                  <p className="text-sm text-gray-600">{obligation.authority}</p>
-                  <p className="text-xs text-gray-500">{obligation.frequency}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Affected Clients</p>
-                  <div className="flex items-center space-x-1">
-                    <Users className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm text-gray-600">{obligation.affectedClients} clients</span>
-                  </div>
-                </div>
-              </div>
-              <div className="mt-4 p-3 bg-red-50 rounded-lg">
-                <p className="text-sm font-medium text-red-800">Penalty for Late Filing</p>
-                <p className="text-sm text-red-700">{obligation.penalty}</p>
-              </div>
-              <div className="mt-4 flex space-x-2">
-                <Button variant="outline" size="sm">View Details</Button>
-                <Button variant="outline" size="sm">Set Reminder</Button>
-                <Button variant="outline" size="sm">Assign Clients</Button>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      {filteredObligations.length === 0 && (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500 mb-4">
+              {isDemoMode 
+                ? "Demo tax obligations will appear here when you log in with demo credentials." 
+                : "No tax obligations found. Add your first obligation to get started."
+              }
+            </p>
+            {!isDemoMode && (
+              <AddTaxObligation 
+                trigger={
+                  <Button className="bg-blue-600 hover:bg-blue-700">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Your First Obligation
+                  </Button>
+                }
+              />
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

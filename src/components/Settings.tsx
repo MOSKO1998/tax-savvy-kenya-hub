@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
 import { 
   User, 
   Bell, 
@@ -21,30 +21,44 @@ import {
   Settings as SettingsIcon,
   Trash2,
   Plus,
-  Edit
+  Edit,
+  Save
 } from "lucide-react";
 
 export const Settings = () => {
   const [activeTab, setActiveTab] = useState("general");
+  const [companyName, setCompanyName] = useState("Chandaria Shah & Associates");
+  const [taxYear, setTaxYear] = useState("2024");
+  const [companyAddress, setCompanyAddress] = useState("Nairobi, Kenya");
+  const [timezone, setTimezone] = useState("EAT");
+  const [currency, setCurrency] = useState("KES");
+  const { toast } = useToast();
+
+  const handleSaveSettings = () => {
+    toast({
+      title: "Settings Saved",
+      description: "Your general settings have been updated successfully.",
+    });
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold text-gray-900">Settings</h2>
-        <Button>
-          <SettingsIcon className="h-4 w-4 mr-2" />
+        <Button onClick={handleSaveSettings} className="bg-blue-600 hover:bg-blue-700">
+          <Save className="h-4 w-4 mr-2" />
           Save All Changes
         </Button>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="tax-settings">Tax Settings</TabsTrigger>
-          <TabsTrigger value="integrations">Integrations</TabsTrigger>
-          <TabsTrigger value="security">Security</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
+          <TabsTrigger value="general" className="text-xs lg:text-sm">General</TabsTrigger>
+          <TabsTrigger value="users" className="text-xs lg:text-sm">Users</TabsTrigger>
+          <TabsTrigger value="notifications" className="text-xs lg:text-sm">Notifications</TabsTrigger>
+          <TabsTrigger value="tax-settings" className="text-xs lg:text-sm">Tax Settings</TabsTrigger>
+          <TabsTrigger value="integrations" className="text-xs lg:text-sm">Integrations</TabsTrigger>
+          <TabsTrigger value="security" className="text-xs lg:text-sm">Security</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="space-y-6">
@@ -55,15 +69,20 @@ export const Settings = () => {
                 <span>General Settings</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="company-name">Company Name</Label>
-                  <Input id="company-name" placeholder="Your Company Name" />
+                  <Label htmlFor="company-name">Company Name *</Label>
+                  <Input 
+                    id="company-name" 
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder="Your Company Name" 
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="tax-year">Current Tax Year</Label>
-                  <Select>
+                  <Label htmlFor="tax-year">Current Tax Year *</Label>
+                  <Select value={taxYear} onValueChange={setTaxYear}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select tax year" />
                     </SelectTrigger>
@@ -75,36 +94,80 @@ export const Settings = () => {
                   </Select>
                 </div>
               </div>
+              
               <div className="space-y-2">
                 <Label htmlFor="company-address">Company Address</Label>
-                <Textarea id="company-address" placeholder="Enter company address" />
+                <Textarea 
+                  id="company-address" 
+                  value={companyAddress}
+                  onChange={(e) => setCompanyAddress(e.target.value)}
+                  placeholder="Enter company address"
+                  rows={3}
+                />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="timezone">Timezone</Label>
-                  <Select>
+                  <Label htmlFor="timezone">Timezone *</Label>
+                  <Select value={timezone} onValueChange={setTimezone}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select timezone" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="EAT">East Africa Time (EAT)</SelectItem>
                       <SelectItem value="UTC">UTC</SelectItem>
+                      <SelectItem value="CAT">Central Africa Time (CAT)</SelectItem>
+                      <SelectItem value="WAT">West Africa Time (WAT)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="currency">Default Currency</Label>
-                  <Select>
+                  <Label htmlFor="currency">Default Currency *</Label>
+                  <Select value={currency} onValueChange={setCurrency}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select currency" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="KES">KES (Kenyan Shilling)</SelectItem>
-                      <SelectItem value="USD">USD</SelectItem>
-                      <SelectItem value="EUR">EUR</SelectItem>
+                      <SelectItem value="USD">USD (US Dollar)</SelectItem>
+                      <SelectItem value="EUR">EUR (Euro)</SelectItem>
+                      <SelectItem value="GBP">GBP (British Pound)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <Separator />
+              
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold">Business Information</h4>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="business-reg">Business Registration Number</Label>
+                    <Input id="business-reg" placeholder="e.g., REG123456" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="kra-pin">KRA PIN</Label>
+                    <Input id="kra-pin" placeholder="e.g., P051234567X" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="vat-number">VAT Registration Number</Label>
+                    <Input id="vat-number" placeholder="Enter VAT number" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="contact-person">Primary Contact Person</Label>
+                    <Input id="contact-person" placeholder="Contact person name" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-4">
+                <Button onClick={handleSaveSettings} className="bg-green-600 hover:bg-green-700">
+                  <Save className="h-4 w-4 mr-2" />
+                  Save General Settings
+                </Button>
               </div>
             </CardContent>
           </Card>
