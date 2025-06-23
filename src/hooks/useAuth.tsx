@@ -125,18 +125,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       // Handle demo login
       if (email === 'demo@chandariashah.com' && password === 'demo123') {
-        // Create a mock session for demo mode
+        // Create a properly structured mock user for demo mode
         const mockUser = {
           id: 'demo-user-id',
+          aud: 'authenticated',
+          role: 'authenticated',
           email: 'demo@chandariashah.com',
-          user_metadata: { full_name: 'Demo User' }
+          email_confirmed_at: new Date().toISOString(),
+          phone: '',
+          confirmed_at: new Date().toISOString(),
+          last_sign_in_at: new Date().toISOString(),
+          app_metadata: {},
+          user_metadata: { 
+            full_name: 'Demo User',
+            company_name: 'Chandaria Shah & Associates'
+          },
+          identities: [],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         } as User;
         
         const mockSession = {
           user: mockUser,
           access_token: 'demo-token',
           refresh_token: 'demo-refresh',
-          expires_at: Date.now() + 3600000,
+          expires_at: Math.floor(Date.now() / 1000) + 3600,
+          expires_in: 3600,
           token_type: 'bearer'
         } as Session;
 
