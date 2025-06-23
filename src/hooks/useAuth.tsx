@@ -9,6 +9,7 @@ interface AuthContextType {
   session: Session | null;
   userRole: any | null;
   loading: boolean;
+  isDemoMode: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, fullName: string, metadata?: any) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -30,7 +31,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isDemoMode, setIsDemoMode] = useState(false);
   const { monitorFailedLogins, monitorSuccessfulLogin } = useSecurityMonitor();
+
+  // Demo user data
+  const createDemoUser = () => {
+    const demoUser = {
+      id: 'demo-user-id',
+      name: 'Demo User',
+      email: 'demo@chandariashah.com',
+      username: 'demo',
+      companyName: 'Chandaria Shah & Associates',
+      role: 'admin',
+      department: 'management',
+      permissions: ['all'],
+      status: 'active'
+    };
+    return demoUser;
+  };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -39,45 +57,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Monitor successful login
-          monitorSuccessfulLogin(session.user.id);
-          
-          // Fetch user role and profile data with timeout
-          setTimeout(async () => {
-            try {
-              const { data: profile } = await supabase
-                .from('profiles')
-                .select(`
-                  *,
-                  user_roles (
-                    role,
-                    department,
-                    status,
-                    permissions
-                  )
-                `)
-                .eq('id', session.user.id)
-                .single();
-              
-              if (profile) {
-                setUserRole({
-                  id: profile.id,
-                  name: profile.full_name,
-                  email: profile.email,
-                  username: profile.username,
-                  companyName: profile.company_name,
-                  role: profile.user_roles?.role || 'admin',
-                  department: profile.user_roles?.department || 'management',
-                  permissions: profile.user_roles?.permissions || ['all'],
-                  status: profile.user_roles?.status || 'active'
-                });
+          // Check if it's demo mode
+          if (session.user.email === 'demo@chandariashah.com') {
+            setIsDemoMode(true);
+            setUserRole(createDemoUser());
+          } else {
+            setIsDemoMode(false);
+            // Monitor successful login
+            monitorSuccessfulLogin(session.user.id);
+            
+            // Fetch user role and profile data with timeout
+            setTimeout(async () => {
+              try {
+                const { data: profile } = await supabase
+                  .from('profiles')
+                  .select(`
+                    *,
+                    user_roles (
+                      role,
+                      department,
+                      status,
+                      permissions
+                    )
+                  `)
+                  .eq('id', session.user.id)
+                  .single();
+                
+                if (profile) {
+                  setUserRole({
+                    id: profile.id,
+                    name: profile.full_name,
+                    email: profile.email,
+                    username: profile.username,
+                    companyName: profile.company_name,
+                    role: profile.user_roles?.role || 'readonly',
+                    department: profile.user_roles?.department || 'tax',
+                    permissions: profile.user_roles?.permissions || ['view_only'],
+                    status: profile.user_roles?.status || 'active'
+                  });
+                }
+              } catch (error) {
+                console.error('Error fetching user profile:', error);
               }
-            } catch (error) {
-              console.error('Error fetching user profile:', error);
-            }
-          }, 0);
+            }, 0);
+          }
         } else {
           setUserRole(null);
+          setIsDemoMode(false);
         }
         
         setLoading(false);
@@ -97,6 +123,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
+      // Handle demo login
+      if (email === 'demo@chandariashah.com' && password === 'demo123') {
+        // Create a mock session for demo mode
+        const mockUser = {
+          id: 'demo-user-id',
+          email: 'demo@chandariashah.com',
+          user_metadata: { full_name: 'Demo User' }
+        } as User;
+        
+        const mockSession = {
+          user: mockUser,
+          access_token: 'demo-token',
+          refresh_token: 'demo-refresh',
+          expires_at: Date.now() + 3600000,
+          token_type: 'bearer'
+        } as Session;
+
+        setSession(mockSession);
+        setUser(mockUser);
+        setIsDemoMode(true);
+        setUserRole(createDemoUser());
+        setLoading(false);
+        
+        return { error: null };
+      }
+
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -132,10 +184,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
+    if (isDemoMode) {
+      // Handle demo logout
+      setUser(null);
+      setSession(null);
+      setUserRole(null);
+      setIsDemoMode(false);
+      return;
+    }
+    
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
     setUserRole(null);
+    setIsDemoMode(false);
   };
 
   const hasPermission = (permission: string) => {
@@ -149,6 +211,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     session,
     userRole,
     loading,
+    isDemoMode,
     signIn,
     signUp,
     signOut,

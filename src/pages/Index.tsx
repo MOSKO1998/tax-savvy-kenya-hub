@@ -17,17 +17,33 @@ import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
-  const { user, userRole, loading, hasPermission } = useAuth();
+  const { user, userRole, loading, hasPermission, isDemoMode } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
     if (user && userRole) {
-      toast({
-        title: "Welcome back!",
-        description: `Logged in as ${userRole.name} (${userRole.role})`,
-      });
+      if (isDemoMode) {
+        toast({
+          title: "Demo Mode Active!",
+          description: "You're viewing demo data for Chandaria Shah & Associates",
+        });
+      } else {
+        toast({
+          title: "Welcome back!",
+          description: `Logged in as ${userRole.name} (${userRole.role})`,
+        });
+        
+        // Show readonly notification for new users
+        if (userRole.role === 'readonly') {
+          toast({
+            title: "Readonly Access",
+            description: "Contact your administrator for editing permissions",
+            variant: "default",
+          });
+        }
+      }
     }
-  }, [user, userRole]);
+  }, [user, userRole, isDemoMode]);
 
   if (loading) {
     return (
@@ -53,17 +69,17 @@ const Index = () => {
       case "dashboard":
         return <DashboardOverview onQuickAction={handleQuickAction} userRole={userRole} />;
       case "clients":
-        return hasPermission('client_management') || hasPermission('view_only') 
+        return hasPermission('client_management') || hasPermission('view_only') || isDemoMode
           ? <ClientManagement /> 
           : <div className="p-6 text-center text-red-600">Access Denied - Insufficient Permissions</div>;
       case "obligations":
-        return hasPermission('tax_management') || hasPermission('view_only')
+        return hasPermission('tax_management') || hasPermission('view_only') || isDemoMode
           ? <KenyaTaxObligations />
           : <div className="p-6 text-center text-red-600">Access Denied - Insufficient Permissions</div>;
       case "calendar":
         return <TaxCalendar />;
       case "documents":
-        return hasPermission('document_view') || hasPermission('view_only')
+        return hasPermission('document_view') || hasPermission('view_only') || isDemoMode
           ? <DocumentManager />
           : <div className="p-6 text-center text-red-600">Access Denied - Insufficient Permissions</div>;
       case "notifications":

@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { QuickActions } from "@/components/QuickActions";
 import { SystemHealthMonitor } from "@/components/SystemHealthMonitor";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { demoDataService } from "@/services/demoDataService";
 import { 
   Users, 
   Calendar, 
@@ -21,6 +23,7 @@ interface DashboardOverviewProps {
 }
 
 export const DashboardOverview = ({ onQuickAction, userRole }: DashboardOverviewProps) => {
+  const { isDemoMode } = useAuth();
   const [stats, setStats] = useState({
     totalClients: 0,
     activeObligations: 0,
@@ -32,8 +35,48 @@ export const DashboardOverview = ({ onQuickAction, userRole }: DashboardOverview
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchDashboardStats();
-  }, []);
+    if (isDemoMode) {
+      fetchDemoStats();
+    } else {
+      fetchDashboardStats();
+    }
+  }, [isDemoMode]);
+
+  const fetchDemoStats = () => {
+    const demoClients = demoDataService.getDemoClients();
+    const demoObligations = demoDataService.getDemoTaxObligations();
+    const demoDocuments = demoDataService.getDemoDocuments();
+
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const activeObligations = demoObligations.filter(o => o.status === 'pending').length;
+    const overdueTasks = demoObligations.filter(o => 
+      o.status === 'pending' && new Date(o.due_date) < now
+    ).length;
+    
+    const completedThisMonth = demoObligations.filter(o => 
+      o.status === 'completed' && 
+      o.completed_at &&
+      new Date(o.completed_at).getMonth() === currentMonth &&
+      new Date(o.completed_at).getFullYear() === currentYear
+    ).length;
+
+    const totalRevenue = demoObligations.reduce((sum, o) => 
+      sum + (o.amount || 0), 0
+    );
+
+    setStats({
+      totalClients: demoClients.length,
+      activeObligations,
+      overdueTasks,
+      completedThisMonth,
+      totalRevenue,
+      pendingDocuments: demoDocuments.length
+    });
+    setLoading(false);
+  };
 
   const fetchDashboardStats = async () => {
     try {
@@ -115,7 +158,10 @@ export const DashboardOverview = ({ onQuickAction, userRole }: DashboardOverview
           <h2 className="text-3xl font-bold text-gray-900">Dashboard Overview</h2>
           <p className="text-gray-600 mt-1">
             Welcome back, {userRole?.name || 'User'}! 
-            {userRole?.companyName && (
+            {isDemoMode && (
+              <span className="text-blue-600 font-medium"> - Demo Mode</span>
+            )}
+            {userRole?.companyName && !isDemoMode && (
               <span className="text-blue-600 font-medium"> - {userRole.companyName}</span>
             )}
           </p>
@@ -129,9 +175,27 @@ export const DashboardOverview = ({ onQuickAction, userRole }: DashboardOverview
           <div className="text-right">
             <p className="text-sm font-semibold text-blue-600">Chandaria Shah & Associates</p>
             <p className="text-xs text-gray-500">Tax Compliance Platform</p>
+            {isDemoMode && (
+              <p className="text-xs text-orange-500 font-medium">Demo Mode Active</p>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Demo Mode Banner */}
+      {isDemoMode && (
+        <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-lg p-4">
+          <div className="flex items-center space-x-2">
+            <AlertTriangle className="h-5 w-5 text-orange-600" />
+            <div>
+              <h3 className="text-sm font-semibold text-orange-800">Demo Mode Active</h3>
+              <p className="text-xs text-orange-700">
+                You're viewing demo data for Chandaria Shah & Associates. Sign up to access your own account.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
