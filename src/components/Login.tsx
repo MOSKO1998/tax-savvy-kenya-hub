@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Eye, EyeOff, Lock, Mail, Calendar, User, Building, UserPlus } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, User, Building, UserPlus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -32,7 +31,7 @@ export const Login = () => {
 
   // Demo account credentials
   const demoAccount = {
-    email: "demo@taxtrucker.com",
+    email: "demo@chandariashah.com",
     password: "demo123"
   };
 
@@ -124,23 +123,26 @@ export const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-4">
-            <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Calendar className="h-7 w-7 text-white" />
-            </div>
+          <div className="flex items-center justify-center mb-6">
+            <img 
+              src="/lovable-uploads/26146ce5-9226-4721-877a-24eb240daffe.png" 
+              alt="Chandaria Shah & Associates" 
+              className="h-20 w-auto object-contain"
+            />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Tax Compliance Hub</h1>
-          <p className="text-gray-600 mt-2">Kenya's premier tax compliance platform</p>
+          <h1 className="text-3xl font-bold text-blue-600 mb-2">Tax Compliance Hub</h1>
+          <p className="text-gray-600 text-sm">Chandaria Shah & Associates LLP</p>
+          <p className="text-blue-500 text-xs mt-1">Certified Public Accountants (K)</p>
         </div>
 
-        <Card className="shadow-lg">
-          <CardHeader>
+        <Card className="shadow-xl border-blue-200">
+          <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-t-lg">
             <CardTitle className="text-2xl text-center">Welcome</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Sign In</TabsTrigger>
@@ -188,7 +190,7 @@ export const Login = () => {
                     </div>
                   </div>
 
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                  <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={isLoading}>
                     {isLoading ? "Signing in..." : "Sign In"}
                   </Button>
                 </form>
@@ -204,7 +206,7 @@ export const Login = () => {
 
                 <Button 
                   variant="outline" 
-                  className="w-full" 
+                  className="w-full border-blue-300 text-blue-600 hover:bg-blue-50" 
                   onClick={handleDemoLogin}
                   disabled={isLoading}
                 >
@@ -212,11 +214,11 @@ export const Login = () => {
                   Demo Login
                 </Button>
 
-                <Alert>
+                <Alert className="border-blue-200 bg-blue-50">
                   <Lock className="h-4 w-4" />
                   <AlertDescription>
                     <strong>Demo Credentials:</strong><br />
-                    Email: demo@taxtrucker.com<br />
+                    Email: demo@chandariashah.com<br />
                     Password: demo123
                   </AlertDescription>
                 </Alert>
@@ -311,15 +313,15 @@ export const Login = () => {
                     </div>
                   </div>
 
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                  <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={isLoading}>
                     {isLoading ? "Creating Account..." : "Create Account"}
                   </Button>
                 </form>
 
-                <Alert>
+                <Alert className="border-blue-200 bg-blue-50">
                   <UserPlus className="h-4 w-4" />
                   <AlertDescription>
-                    <strong>New users get full admin access</strong> to manage their company's tax compliance data.
+                    <strong>New users get full admin access</strong> to manage their company's tax compliance data with Chandaria Shah & Associates.
                   </AlertDescription>
                 </Alert>
               </TabsContent>
@@ -328,7 +330,8 @@ export const Login = () => {
         </Card>
 
         <div className="mt-6 text-center text-sm text-gray-500">
-          <p>© 2024 Tax Compliance Hub. Built for Kenya's tax compliance needs.</p>
+          <p>© 2024 Chandaria Shah & Associates LLP</p>
+          <p className="text-xs text-blue-600">Certified Public Accountants - Kenya</p>
         </div>
       </div>
     </div>

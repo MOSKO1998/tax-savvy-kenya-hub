@@ -46,20 +46,26 @@ export const Sidebar = ({ activeTab, setActiveTab, userRole }: SidebarProps) => 
   const visibleMenuItems = getVisibleMenuItems();
 
   return (
-    <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
-      <div className="p-6">
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-            <Calendar className="h-5 w-5 text-white" />
+    <div className="w-64 bg-gradient-to-b from-blue-50 to-white border-r border-blue-200 flex flex-col shadow-lg">
+      <div className="p-6 border-b border-blue-200">
+        <div className="flex flex-col items-center space-y-3">
+          <img 
+            src="/lovable-uploads/0ef251d1-5854-45d3-87ec-f84e8e6b8846.png" 
+            alt="Chandaria Shah & Associates" 
+            className="h-16 w-16 object-contain"
+          />
+          <div className="text-center">
+            <h2 className="font-bold text-blue-600 text-sm">Chandaria Shah</h2>
+            <p className="text-xs text-gray-600">& Associates</p>
+            <p className="text-xs text-blue-500 font-medium mt-1">Tax Compliance Hub</p>
           </div>
-          <span className="font-semibold text-gray-900">TaxTracker</span>
         </div>
       </div>
       
       {/* User Info */}
       {userRole && (
-        <div className="px-6 pb-4">
-          <div className="bg-blue-50 rounded-lg p-3">
+        <div className="px-6 py-4 border-b border-blue-100">
+          <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
             <p className="font-medium text-blue-900 text-sm">{userRole.name}</p>
             <p className="text-blue-700 text-xs">{userRole.role}</p>
             <p className="text-blue-600 text-xs">{userRole.department}</p>
@@ -67,7 +73,7 @@ export const Sidebar = ({ activeTab, setActiveTab, userRole }: SidebarProps) => 
         </div>
       )}
       
-      <nav className="flex-1 px-4 pb-4">
+      <nav className="flex-1 px-4 py-4">
         <ul className="space-y-2">
           {visibleMenuItems.map((item) => {
             const Icon = item.icon;
@@ -79,22 +85,29 @@ export const Sidebar = ({ activeTab, setActiveTab, userRole }: SidebarProps) => 
                   onClick={() => !isDisabled && setActiveTab(item.id)}
                   disabled={isDisabled}
                   className={cn(
-                    "w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors",
+                    "w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-all duration-200",
                     activeTab === item.id
-                      ? "bg-blue-50 text-blue-700 border border-blue-200"
+                      ? "bg-blue-600 text-white shadow-lg transform scale-105"
                       : isDisabled
                       ? "text-gray-400 cursor-not-allowed"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      : "text-gray-700 hover:bg-blue-50 hover:text-blue-600 hover:shadow-md"
                   )}
                 >
                   <Icon className="h-5 w-5" />
-                  <span>{item.label}</span>
+                  <span className="font-medium">{item.label}</span>
                 </button>
               </li>
             );
           })}
         </ul>
       </nav>
+
+      <div className="p-4 border-t border-blue-200">
+        <div className="text-center">
+          <p className="text-xs text-gray-500">© 2024 Chandaria Shah & Associates</p>
+          <p className="text-xs text-blue-600">Professional Tax Services</p>
+        </div>
+      </div>
     </div>
   );
 };

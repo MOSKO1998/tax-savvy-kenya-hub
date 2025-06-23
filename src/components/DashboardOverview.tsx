@@ -69,7 +69,7 @@ export const DashboardOverview = ({ onQuickAction, userRole }: DashboardOverview
       ).length || 0;
 
       const totalRevenue = obligations?.reduce((sum, o) => 
-        sum + (parseFloat(o.amount) || 0), 0
+        sum + (parseFloat(o.amount?.toString() || '0') || 0), 0
       ) || 0;
 
       setStats({
@@ -112,7 +112,7 @@ export const DashboardOverview = ({ onQuickAction, userRole }: DashboardOverview
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">Dashboard</h2>
+          <h2 className="text-3xl font-bold text-gray-900">Dashboard Overview</h2>
           <p className="text-gray-600 mt-1">
             Welcome back, {userRole?.name || 'User'}! 
             {userRole?.companyName && (
@@ -120,53 +120,64 @@ export const DashboardOverview = ({ onQuickAction, userRole }: DashboardOverview
             )}
           </p>
         </div>
+        <div className="flex items-center space-x-2">
+          <img 
+            src="/lovable-uploads/0ef251d1-5854-45d3-87ec-f84e8e6b8846.png" 
+            alt="Chandaria Shah & Associates" 
+            className="h-12 w-12 object-contain"
+          />
+          <div className="text-right">
+            <p className="text-sm font-semibold text-blue-600">Chandaria Shah & Associates</p>
+            <p className="text-xs text-gray-500">Tax Compliance Platform</p>
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
           <CardContent className="p-6">
             <div className="flex items-center space-x-2">
               <Users className="h-8 w-8 text-blue-600" />
               <div>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalClients}</p>
-                <p className="text-sm text-gray-600">Total Clients</p>
+                <p className="text-2xl font-bold text-blue-900">{stats.totalClients}</p>
+                <p className="text-sm text-blue-700">Total Clients</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
           <CardContent className="p-6">
             <div className="flex items-center space-x-2">
               <Calendar className="h-8 w-8 text-green-600" />
               <div>
-                <p className="text-2xl font-bold text-gray-900">{stats.activeObligations}</p>
-                <p className="text-sm text-gray-600">Active Obligations</p>
+                <p className="text-2xl font-bold text-green-900">{stats.activeObligations}</p>
+                <p className="text-sm text-green-700">Active Obligations</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
           <CardContent className="p-6">
             <div className="flex items-center space-x-2">
               <AlertTriangle className="h-8 w-8 text-red-600" />
               <div>
-                <p className="text-2xl font-bold text-gray-900">{stats.overdueTasks}</p>
-                <p className="text-sm text-gray-600">Overdue Tasks</p>
+                <p className="text-2xl font-bold text-red-900">{stats.overdueTasks}</p>
+                <p className="text-sm text-red-700">Overdue Tasks</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
           <CardContent className="p-6">
             <div className="flex items-center space-x-2">
               <CheckCircle className="h-8 w-8 text-purple-600" />
               <div>
-                <p className="text-2xl font-bold text-gray-900">{stats.completedThisMonth}</p>
-                <p className="text-sm text-gray-600">Completed This Month</p>
+                <p className="text-2xl font-bold text-purple-900">{stats.completedThisMonth}</p>
+                <p className="text-sm text-purple-700">Completed This Month</p>
               </div>
             </div>
           </CardContent>
@@ -175,27 +186,27 @@ export const DashboardOverview = ({ onQuickAction, userRole }: DashboardOverview
 
       {/* Additional Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
           <CardContent className="p-6">
             <div className="flex items-center space-x-2">
-              <DollarSign className="h-8 w-8 text-green-600" />
+              <DollarSign className="h-8 w-8 text-orange-600" />
               <div>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-2xl font-bold text-orange-900">
                   KES {stats.totalRevenue.toLocaleString()}
                 </p>
-                <p className="text-sm text-gray-600">Total Tax Value</p>
+                <p className="text-sm text-orange-700">Total Tax Value</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200">
           <CardContent className="p-6">
             <div className="flex items-center space-x-2">
-              <FileText className="h-8 w-8 text-blue-600" />
+              <FileText className="h-8 w-8 text-indigo-600" />
               <div>
-                <p className="text-2xl font-bold text-gray-900">{stats.pendingDocuments}</p>
-                <p className="text-sm text-gray-600">Documents Uploaded</p>
+                <p className="text-2xl font-bold text-indigo-900">{stats.pendingDocuments}</p>
+                <p className="text-sm text-indigo-700">Documents Uploaded</p>
               </div>
             </div>
           </CardContent>

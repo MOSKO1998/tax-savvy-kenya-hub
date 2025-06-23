@@ -109,14 +109,24 @@ export const Header = ({ userRole }: HeaderProps) => {
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4">
+    <header className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <h1 className="text-xl font-semibold text-gray-900">
-            Tax Compliance Hub
-          </h1>
+          <div className="flex items-center space-x-3">
+            <img 
+              src="/lovable-uploads/26146ce5-9226-4721-877a-24eb240daffe.png" 
+              alt="Chandaria Shah & Associates" 
+              className="h-10 w-auto object-contain"
+            />
+            <div>
+              <h1 className="text-xl font-bold text-blue-600">
+                Tax Compliance Hub
+              </h1>
+              <p className="text-xs text-gray-500">Chandaria Shah & Associates</p>
+            </div>
+          </div>
           {userRole?.companyName && (
-            <Badge variant="outline" className="text-blue-600 border-blue-600">
+            <Badge variant="outline" className="text-blue-600 border-blue-600 bg-blue-50">
               {userRole.companyName}
             </Badge>
           )}
@@ -184,7 +194,7 @@ export const Header = ({ userRole }: HeaderProps) => {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <Avatar className="h-8 w-8">
-                  <AvatarFallback>
+                  <AvatarFallback className="bg-blue-600 text-white">
                     {userRole?.name?.charAt(0)?.toUpperCase() || 'U'}
                   </AvatarFallback>
                 </Avatar>
