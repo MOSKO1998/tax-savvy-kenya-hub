@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,7 +32,7 @@ export const ReportGenerator = () => {
   
   const { isDemoMode } = useAuth();
   const { clients } = useClients();
-  const { taxObligations } = useTaxObligations();
+  const { obligations } = useTaxObligations();
 
   const reportTypes = [
     {
@@ -119,7 +118,7 @@ export const ReportGenerator = () => {
         format,
         generatedAt: new Date().toISOString(),
         totalClients: clients.length,
-        totalObligations: taxObligations.length,
+        totalObligations: obligations.length,
         isDemoData: isDemoMode
       };
 
@@ -310,7 +309,7 @@ export const ReportGenerator = () => {
                       <li>• {selectedStatuses.length > 0 ? `${selectedStatuses.length} selected statuses` : "All statuses"}</li>
                       <li>• {dateFrom ? `From ${dateFrom.toLocaleDateString()}` : "All dates"}</li>
                       <li>• {dateTo ? `To ${dateTo.toLocaleDateString()}` : "To current date"}</li>
-                      <li>• Total obligations: {taxObligations.length}</li>
+                      <li>• Total obligations: {obligations.length}</li>
                     </ul>
                   </div>
 

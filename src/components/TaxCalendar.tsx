@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,7 +23,7 @@ export const TaxCalendar = () => {
   const [activeView, setActiveView] = useState("calendar");
   const [showAddObligation, setShowAddObligation] = useState(false);
   const { isDemoMode } = useAuth();
-  const { taxObligations } = useTaxObligations();
+  const { obligations } = useTaxObligations();
 
   // Demo tax events - only shown in demo mode
   const demoTaxEvents = [
@@ -76,7 +75,7 @@ export const TaxCalendar = () => {
   ];
 
   // Convert real tax obligations to calendar events
-  const realTaxEvents = taxObligations.map(obligation => {
+  const realTaxEvents = obligations.map(obligation => {
     const dueDate = new Date(obligation.due_date);
     return {
       date: dueDate.getDate(),
@@ -89,7 +88,7 @@ export const TaxCalendar = () => {
     };
   }).filter(event => {
     const eventDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), event.date);
-    return taxObligations.some(obligation => {
+    return obligations.some(obligation => {
       const obligationDate = new Date(obligation.due_date);
       return obligationDate.getMonth() === currentDate.getMonth() && 
              obligationDate.getFullYear() === currentDate.getFullYear();

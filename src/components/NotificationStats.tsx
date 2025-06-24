@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,7 +12,7 @@ export const NotificationStats = () => {
     completed: 0
   });
   const { isDemoMode, userRole } = useAuth();
-  const { taxObligations } = useTaxObligations();
+  const { obligations } = useTaxObligations();
 
   useEffect(() => {
     if (isDemoMode) {
@@ -44,12 +43,12 @@ export const NotificationStats = () => {
         ).length;
         
         // Calculate stats based on real data
-        const overdueObligations = taxObligations.filter(o => 
+        const overdueObligations = obligations.filter(o => 
           o.status === 'overdue' || 
           (o.status === 'pending' && new Date(o.due_date) < new Date())
         ).length;
 
-        const completedObligations = taxObligations.filter(o => 
+        const completedObligations = obligations.filter(o => 
           o.status === 'completed'
         ).length;
 
@@ -63,18 +62,18 @@ export const NotificationStats = () => {
     } catch (error) {
       console.error('Error fetching notification stats:', error);
       // Fallback to obligation-based stats
-      const overdueCount = taxObligations.filter(o => 
+      const overdueCount = obligations.filter(o => 
         o.status === 'overdue' || 
         (o.status === 'pending' && new Date(o.due_date) < new Date())
       ).length;
 
-      const completedCount = taxObligations.filter(o => 
+      const completedCount = obligations.filter(o => 
         o.status === 'completed'
       ).length;
 
       setStats({
         critical: overdueCount,
-        highPriority: taxObligations.filter(o => o.status === 'pending').length,
+        highPriority: obligations.filter(o => o.status === 'pending').length,
         unread: 0,
         completed: completedCount
       });
