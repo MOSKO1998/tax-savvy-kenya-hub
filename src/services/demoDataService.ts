@@ -1,4 +1,3 @@
-
 // Demo data service for Chandaria Shah & Associates
 export const demoDataService = {
   getDemoClients: () => [
@@ -90,37 +89,59 @@ export const demoDataService = {
 
   getDemoDocuments: () => [
     {
-      id: 'demo-doc-001',
-      title: 'VAT Returns Q1 2024.pdf',
-      description: 'Quarterly VAT return documents',
-      document_type: 'tax_return',
-      file_path: '/demo/vat_q1_2024.pdf',
-      mime_type: 'application/pdf',
-      file_size: 245760,
-      client_id: 'demo-client-001',
-      created_at: '2024-04-18T16:30:00Z'
+      id: 1,
+      name: "VAT Return Q4 2023.pdf",
+      client: "ABC Manufacturing Ltd",
+      type: "Tax Return",
+      uploadDate: "2024-01-15",
+      uploadedBy: "John Kamau",
+      size: "2.4 MB",
+      status: "approved",
+      category: "tax-returns"
     },
     {
-      id: 'demo-doc-002',
-      title: 'PAYE Schedule March.xlsx',
-      description: 'Monthly PAYE schedule',
-      document_type: 'other',
-      file_path: '/demo/paye_march_2024.xlsx',
-      mime_type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      file_size: 156432,
-      client_id: 'demo-client-002',
-      created_at: '2024-03-25T11:20:00Z'
+      id: 2,
+      name: "Financial Statements 2023.xlsx",
+      client: "XYZ Services Ltd",
+      type: "Financial Statement",
+      uploadDate: "2024-01-14",
+      uploadedBy: "Mary Wanjiku",
+      size: "1.8 MB",
+      status: "pending",
+      category: "financial-statements"
     },
     {
-      id: 'demo-doc-003',
-      title: 'Corporate Tax Working Papers.pdf',
-      description: 'Annual tax computation working papers',
-      document_type: 'other',
-      file_path: '/demo/corp_tax_2023.pdf',
-      mime_type: 'application/pdf',
-      file_size: 1024000,
-      client_id: 'demo-client-003',
-      created_at: '2024-02-15T14:45:00Z'
+      id: 3,
+      name: "Corporation Tax Computation.pdf",
+      client: "Kenya Exports Co.",
+      type: "Tax Computation",
+      uploadDate: "2024-01-13",
+      uploadedBy: "Peter Mwangi",
+      size: "3.2 MB",
+      status: "approved",
+      category: "tax-returns"
+    },
+    {
+      id: 4,
+      name: "Board Resolution.pdf",
+      client: "Tech Solutions Ltd",
+      type: "Legal Document",
+      uploadDate: "2024-01-12",
+      uploadedBy: "Jane Achieng",
+      size: "956 KB",
+      status: "under-review",
+      category: "legal-docs"
+    },
+    {
+      id: 5,
+      name: "KRA Correspondence.pdf",
+      client: "ABC Manufacturing Ltd",
+      type: "Correspondence",
+      uploadDate: "2024-01-11",
+      uploadedBy: "John Kamau",
+      size: "1.2 MB",
+      status: "approved",
+      category: "correspondence"
     }
   ],
 

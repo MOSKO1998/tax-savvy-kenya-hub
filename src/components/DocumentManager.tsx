@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,77 +21,25 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DocumentUpload } from "@/components/DocumentUpload";
+import { useAuth } from "@/hooks/useAuth";
+import { demoDataService } from "@/services/demoDataService";
 
 export const DocumentManager = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFolder, setSelectedFolder] = useState("all");
   const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const { isDemoMode } = useAuth();
 
   const folders = [
-    { id: "all", name: "All Documents", count: 156 },
-    { id: "tax-returns", name: "Tax Returns", count: 45 },
-    { id: "financial-statements", name: "Financial Statements", count: 32 },
-    { id: "legal-docs", name: "Legal Documents", count: 28 },
-    { id: "correspondence", name: "Correspondence", count: 51 }
+    { id: "all", name: "All Documents", count: isDemoMode ? 5 : 0 },
+    { id: "tax-returns", name: "Tax Returns", count: isDemoMode ? 2 : 0 },
+    { id: "financial-statements", name: "Financial Statements", count: isDemoMode ? 1 : 0 },
+    { id: "legal-docs", name: "Legal Documents", count: isDemoMode ? 1 : 0 },
+    { id: "correspondence", name: "Correspondence", count: isDemoMode ? 1 : 0 }
   ];
 
-  const documents = [
-    {
-      id: 1,
-      name: "VAT Return Q4 2023.pdf",
-      client: "ABC Manufacturing Ltd",
-      type: "Tax Return",
-      uploadDate: "2024-01-15",
-      uploadedBy: "John Kamau",
-      size: "2.4 MB",
-      status: "approved",
-      category: "tax-returns"
-    },
-    {
-      id: 2,
-      name: "Financial Statements 2023.xlsx",
-      client: "XYZ Services Ltd",
-      type: "Financial Statement",
-      uploadDate: "2024-01-14",
-      uploadedBy: "Mary Wanjiku",
-      size: "1.8 MB",
-      status: "pending",
-      category: "financial-statements"
-    },
-    {
-      id: 3,
-      name: "Corporation Tax Computation.pdf",
-      client: "Kenya Exports Co.",
-      type: "Tax Computation",
-      uploadDate: "2024-01-13",
-      uploadedBy: "Peter Mwangi",
-      size: "3.2 MB",
-      status: "approved",
-      category: "tax-returns"
-    },
-    {
-      id: 4,
-      name: "Board Resolution.pdf",
-      client: "Tech Solutions Ltd",
-      type: "Legal Document",
-      uploadDate: "2024-01-12",
-      uploadedBy: "Jane Achieng",
-      size: "956 KB",
-      status: "under-review",
-      category: "legal-docs"
-    },
-    {
-      id: 5,
-      name: "KRA Correspondence.pdf",
-      client: "ABC Manufacturing Ltd",
-      type: "Correspondence",
-      uploadDate: "2024-01-11",
-      uploadedBy: "John Kamau",
-      size: "1.2 MB",
-      status: "approved",
-      category: "correspondence"
-    }
-  ];
+  // Only show demo documents in demo mode
+  const documents = isDemoMode ? demoDataService.getDemoDocuments() : [];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -202,85 +151,98 @@ export const DocumentManager = () => {
           </Card>
 
           {/* Documents Grid */}
-          <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="text-left p-4 text-sm font-medium text-gray-600">Document</th>
-                      <th className="text-left p-4 text-sm font-medium text-gray-600">Client</th>
-                      <th className="text-left p-4 text-sm font-medium text-gray-600">Type</th>
-                      <th className="text-left p-4 text-sm font-medium text-gray-600">Upload Date</th>
-                      <th className="text-left p-4 text-sm font-medium text-gray-600">Status</th>
-                      <th className="text-left p-4 text-sm font-medium text-gray-600">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {filteredDocuments.map((doc) => (
-                      <tr key={doc.id} className="hover:bg-gray-50">
-                        <td className="p-4">
-                          <div className="flex items-center space-x-3">
-                            {getFileIcon(doc.type)}
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">{doc.name}</p>
-                              <p className="text-xs text-gray-500">{doc.size}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <p className="text-sm text-gray-900">{doc.client}</p>
-                        </td>
-                        <td className="p-4">
-                          <p className="text-sm text-gray-600">{doc.type}</p>
-                        </td>
-                        <td className="p-4">
-                          <div>
-                            <p className="text-sm text-gray-900">{doc.uploadDate}</p>
-                            <p className="text-xs text-gray-500">by {doc.uploadedBy}</p>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <Badge className={getStatusColor(doc.status)}>
-                            {doc.status.replace('-', ' ')}
-                          </Badge>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center space-x-2">
-                            <Button variant="ghost" size="icon">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon">
-                              <Download className="h-4 w-4" />
-                            </Button>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent>
-                                <DropdownMenuItem>Edit</DropdownMenuItem>
-                                <DropdownMenuItem>Share</DropdownMenuItem>
-                                <DropdownMenuItem>Move</DropdownMenuItem>
-                                <DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </td>
+          {filteredDocuments.length > 0 ? (
+            <Card>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="text-left p-4 text-sm font-medium text-gray-600">Document</th>
+                        <th className="text-left p-4 text-sm font-medium text-gray-600">Client</th>
+                        <th className="text-left p-4 text-sm font-medium text-gray-600">Type</th>
+                        <th className="text-left p-4 text-sm font-medium text-gray-600">Upload Date</th>
+                        <th className="text-left p-4 text-sm font-medium text-gray-600">Status</th>
+                        <th className="text-left p-4 text-sm font-medium text-gray-600">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-
-          {filteredDocuments.length === 0 && (
-            <Card className="mt-6">
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {filteredDocuments.map((doc) => (
+                        <tr key={doc.id} className="hover:bg-gray-50">
+                          <td className="p-4">
+                            <div className="flex items-center space-x-3">
+                              {getFileIcon(doc.type)}
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">{doc.name}</p>
+                                <p className="text-xs text-gray-500">{doc.size}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <p className="text-sm text-gray-900">{doc.client}</p>
+                          </td>
+                          <td className="p-4">
+                            <p className="text-sm text-gray-600">{doc.type}</p>
+                          </td>
+                          <td className="p-4">
+                            <div>
+                              <p className="text-sm text-gray-900">{doc.uploadDate}</p>
+                              <p className="text-xs text-gray-500">by {doc.uploadedBy}</p>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <Badge className={getStatusColor(doc.status)}>
+                              {doc.status.replace('-', ' ')}
+                            </Badge>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center space-x-2">
+                              <Button variant="ghost" size="icon">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon">
+                                <Download className="h-4 w-4" />
+                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                  <DropdownMenuItem>Edit</DropdownMenuItem>
+                                  <DropdownMenuItem>Share</DropdownMenuItem>
+                                  <DropdownMenuItem>Move</DropdownMenuItem>
+                                  <DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
               <CardContent className="p-12 text-center">
                 <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">No documents found matching your criteria.</p>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No documents uploaded</h3>
+                <p className="text-gray-500 mb-4">
+                  {isDemoMode 
+                    ? "You're in demo mode. Switch to a real account to upload documents."
+                    : "Upload your first document to get started with document management."
+                  }
+                </p>
+                <Button 
+                  onClick={() => setShowUploadDialog(true)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload Document
+                </Button>
               </CardContent>
             </Card>
           )}
