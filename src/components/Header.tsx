@@ -20,70 +20,110 @@ interface HeaderProps {
 }
 
 export const Header = ({ userRole }: HeaderProps) => {
-  const { signOut } = useAuth();
+  const { signOut, isDemoMode } = useAuth();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    if (userRole?.id) {
-      fetchNotifications();
-      subscribeToNotifications();
+    // Don't fetch notifications for demo users
+    if (isDemoMode || !userRole?.id) {
+      // Set demo notifications for demo mode
+      if (isDemoMode) {
+        const demoNotifications = [
+          {
+            id: 'demo-1',
+            title: 'Welcome to Demo Mode',
+            message: 'You are currently viewing demo data',
+            type: 'system_alert',
+            read: false,
+            created_at: new Date().toISOString()
+          },
+          {
+            id: 'demo-2',
+            title: 'Tax Deadline Reminder',
+            message: 'VAT return due in 5 days',
+            type: 'deadline_reminder',
+            read: true,
+            created_at: new Date(Date.now() - 86400000).toISOString()
+          }
+        ];
+        setNotifications(demoNotifications);
+        setUnreadCount(demoNotifications.filter(n => !n.read).length);
+      }
+      return;
     }
-  }, [userRole?.id]);
 
-  const fetchNotifications = async () => {
-    if (!userRole?.id) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', userRole.id)
-        .order('created_at', { ascending: false })
-        .limit(5);
+    let channel: any = null;
 
-      if (error) throw error;
-      
-      setNotifications(data || []);
-      setUnreadCount(data?.filter(n => !n.read).length || 0);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-    }
-  };
+    const fetchNotifications = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', userRole.id)
+          .order('created_at', { ascending: false })
+          .limit(5);
 
-  const subscribeToNotifications = () => {
-    if (!userRole?.id) return;
+        if (error) throw error;
+        
+        setNotifications(data || []);
+        setUnreadCount(data?.filter(n => !n.read).length || 0);
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+        setNotifications([]);
+        setUnreadCount(0);
+      }
+    };
 
-    const channel = supabase
-      .channel('notifications')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${userRole.id}`
-        },
-        (payload) => {
-          console.log('Notification update:', payload);
-          fetchNotifications();
-        }
-      )
-      .subscribe();
+    const subscribeToNotifications = () => {
+      channel = supabase
+        .channel(`notifications-${userRole.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${userRole.id}`
+          },
+          (payload) => {
+            console.log('Notification update:', payload);
+            fetchNotifications();
+          }
+        )
+        .subscribe();
+    };
+
+    fetchNotifications();
+    subscribeToNotifications();
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
     };
-  };
+  }, [userRole?.id, isDemoMode]);
 
   const markAsRead = async (notificationId: string) => {
+    if (isDemoMode) {
+      // Handle demo mode locally
+      setNotifications(prev => 
+        prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+      return;
+    }
+
     try {
       await supabase
         .from('notifications')
         .update({ read: true })
         .eq('id', notificationId);
       
-      fetchNotifications();
+      setNotifications(prev => 
+        prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
@@ -128,6 +168,11 @@ export const Header = ({ userRole }: HeaderProps) => {
           {userRole?.companyName && (
             <Badge variant="outline" className="text-blue-600 border-blue-600 bg-blue-50">
               {userRole.companyName}
+            </Badge>
+          )}
+          {isDemoMode && (
+            <Badge variant="secondary" className="text-orange-600 border-orange-600 bg-orange-50">
+              Demo Mode
             </Badge>
           )}
         </div>
