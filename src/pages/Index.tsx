@@ -7,6 +7,7 @@ import { KenyaTaxObligations } from "@/components/KenyaTaxObligations";
 import { TaxCalendar } from "@/components/TaxCalendar";
 import { DocumentManager } from "@/components/DocumentManager";
 import { NotificationCenter } from "@/components/NotificationCenter";
+import { ReportGenerator } from "@/components/ReportGenerator";
 import { UserManagement } from "@/components/UserManagement";
 import { Settings } from "@/components/Settings";
 import { SecurityDashboard } from "@/components/SecurityDashboard";
@@ -81,6 +82,10 @@ const Index = () => {
       case "documents":
         return hasPermission('document_view') || hasPermission('view_only') || isDemoMode
           ? <DocumentManager />
+          : <div className="p-6 text-center text-red-600">Access Denied - Insufficient Permissions</div>;
+      case "reports":
+        return hasPermission('tax_management') || hasPermission('view_only') || isDemoMode
+          ? <ReportGenerator />
           : <div className="p-6 text-center text-red-600">Access Denied - Insufficient Permissions</div>;
       case "notifications":
         return <NotificationCenter />;

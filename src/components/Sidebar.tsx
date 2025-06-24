@@ -1,15 +1,24 @@
 
-import { 
-  Calendar, 
-  FileText, 
-  Home, 
-  Users, 
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  LayoutDashboard,
+  Users,
+  FileText,
+  Calendar,
+  FolderOpen,
   Bell,
+  BarChart3,
+  UserCheck,
+  Shield,
   Settings,
-  UserCog,
-  Shield
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
+  Building2
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 
 interface SidebarProps {
   activeTab: string;
@@ -17,96 +26,225 @@ interface SidebarProps {
   userRole?: any;
 }
 
-const menuItems = [
-  { id: "dashboard", label: "Dashboard", icon: Home, permission: null },
-  { id: "clients", label: "Clients", icon: Users, permission: "client_management" },
-  { id: "obligations", label: "Tax Obligations", icon: Calendar, permission: "tax_management" },
-  { id: "calendar", label: "Tax Calendar", icon: Calendar, permission: "tax_management" },
-  { id: "documents", label: "Documents", icon: FileText, permission: "document_view" },
-  { id: "notifications", label: "Notifications", icon: Bell, permission: null },
-  { id: "users", label: "User Management", icon: UserCog, permission: "user_management" },
-  { id: "security", label: "Security", icon: Shield, permission: "system_settings" },
-  { id: "settings", label: "Settings", icon: Settings, permission: "system_settings" },
-];
-
 export const Sidebar = ({ activeTab, setActiveTab, userRole }: SidebarProps) => {
-  const hasPermission = (permission: string) => {
-    if (!userRole) return false;
-    if (userRole.permissions?.includes('all')) return true;
-    return userRole.permissions?.includes(permission) || userRole.permissions?.includes('view_only') || false;
+  const [collapsed, setCollapsed] = useState(false);
+  const { signOut, hasPermission, isDemoMode } = useAuth();
+
+  const menuItems = [
+    {
+      id: "dashboard",
+      name: "Dashboard",
+      icon: LayoutDashboard,
+      permission: null,
+      badge: null
+    },
+    {
+      id: "clients",
+      name: "Clients",
+      icon: Users,
+      permission: "client_management",
+      badge: null
+    },
+    {
+      id: "obligations",
+      name: "Tax Obligations",
+      icon: FileText,
+      permission: "tax_management",
+      badge: null
+    },
+    {
+      id: "calendar",
+      name: "Tax Calendar",
+      icon: Calendar,
+      permission: null,
+      badge: null
+    },
+    {
+      id: "documents",
+      name: "Documents",
+      icon: FolderOpen,
+      permission: "document_view",
+      badge: null
+    },
+    {
+      id: "reports",
+      name: "Reports",
+      icon: BarChart3,
+      permission: "tax_management",
+      badge: "New"
+    },
+    {
+      id: "notifications",
+      name: "Notifications",
+      icon: Bell,
+      permission: null,
+      badge: null
+    }
+  ];
+
+  const adminItems = [
+    {
+      id: "users",
+      name: "User Management",
+      icon: UserCheck,
+      permission: "user_management"
+    },
+    {
+      id: "security",
+      name: "Security Dashboard",
+      icon: Shield,
+      permission: "system_settings"
+    },
+    {
+      id: "settings",
+      name: "Settings",
+      icon: Settings,
+      permission: "system_settings"
+    }
+  ];
+
+  const handleSignOut = async () => {
+    await signOut();
   };
 
-  const getVisibleMenuItems = () => {
-    return menuItems.filter(item => {
-      if (!item.permission) return true;
-      return hasPermission(item.permission);
-    });
+  const isAccessible = (permission: string | null) => {
+    if (!permission) return true;
+    return hasPermission(permission) || hasPermission('view_only') || isDemoMode;
   };
 
-  const visibleMenuItems = getVisibleMenuItems();
+  const isAdminAccessible = (permission: string) => {
+    return hasPermission(permission) || hasPermission('all');
+  };
 
   return (
-    <div className="w-64 bg-gradient-to-b from-blue-50 to-white border-r border-blue-200 flex flex-col shadow-lg">
-      <div className="p-6 border-b border-blue-200">
-        <div className="flex flex-col items-center space-y-3">
-          <img 
-            src="/lovable-uploads/0ef251d1-5854-45d3-87ec-f84e8e6b8846.png" 
-            alt="Chandaria Shah & Associates" 
-            className="h-16 w-16 object-contain"
-          />
-          <div className="text-center">
-            <h2 className="font-bold text-blue-600 text-sm">Chandaria Shah</h2>
-            <p className="text-xs text-gray-600">& Associates</p>
-            <p className="text-xs text-blue-500 font-medium mt-1">Tax Compliance Hub</p>
-          </div>
+    <div className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ${
+      collapsed ? 'w-16' : 'w-64'
+    }`}>
+      {/* Header */}
+      <div className="p-4 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          {!collapsed && (
+            <div className="flex items-center space-x-2">
+              <Building2 className="h-6 w-6 text-blue-600" />
+              <span className="text-lg font-semibold text-gray-900">CS&A Hub</span>
+            </div>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setCollapsed(!collapsed)}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </Button>
         </div>
       </div>
-      
+
       {/* User Info */}
-      {userRole && (
-        <div className="px-6 py-4 border-b border-blue-100">
-          <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-            <p className="font-medium text-blue-900 text-sm">{userRole.name}</p>
-            <p className="text-blue-700 text-xs">{userRole.role}</p>
-            <p className="text-blue-600 text-xs">{userRole.department}</p>
+      {!collapsed && userRole && (
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+              {userRole.name?.charAt(0)?.toUpperCase() || 'U'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">
+                {userRole.name}
+              </p>
+              <p className="text-xs text-gray-500 truncate">
+                {userRole.role} - {userRole.department}
+              </p>
+            </div>
           </div>
+          {isDemoMode && (
+            <Badge variant="secondary" className="mt-2 text-orange-600 border-orange-600 bg-orange-50">
+              Demo Mode
+            </Badge>
+          )}
         </div>
       )}
-      
-      <nav className="flex-1 px-4 py-4">
-        <ul className="space-y-2">
-          {visibleMenuItems.map((item) => {
+
+      {/* Navigation */}
+      <nav className="flex-1 p-4 space-y-2">
+        {/* Main Menu */}
+        <div className="space-y-1">
+          {menuItems.map((item) => {
             const Icon = item.icon;
-            const isDisabled = item.permission && !hasPermission(item.permission);
+            const accessible = isAccessible(item.permission);
             
             return (
-              <li key={item.id}>
-                <button
-                  onClick={() => !isDisabled && setActiveTab(item.id)}
-                  disabled={isDisabled}
-                  className={cn(
-                    "w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-all duration-200",
-                    activeTab === item.id
-                      ? "bg-blue-600 text-white shadow-lg transform scale-105"
-                      : isDisabled
-                      ? "text-gray-400 cursor-not-allowed"
-                      : "text-gray-700 hover:bg-blue-50 hover:text-blue-600 hover:shadow-md"
-                  )}
-                >
-                  <Icon className="h-5 w-5" />
-                  <span className="font-medium">{item.label}</span>
-                </button>
-              </li>
+              <Button
+                key={item.id}
+                variant={activeTab === item.id ? "default" : "ghost"}
+                className={`w-full justify-start ${
+                  collapsed ? 'px-2' : 'px-3'
+                } ${!accessible ? 'opacity-50 cursor-not-allowed' : ''}`}
+                onClick={() => accessible && setActiveTab(item.id)}
+                disabled={!accessible}
+                title={collapsed ? item.name : undefined}
+              >
+                <Icon className={`h-4 w-4 ${collapsed ? '' : 'mr-3'}`} />
+                {!collapsed && (
+                  <>
+                    <span className="flex-1 text-left">{item.name}</span>
+                    {item.badge && (
+                      <Badge variant="secondary" className="ml-2 text-xs">
+                        {item.badge}
+                      </Badge>
+                    )}
+                  </>
+                )}
+              </Button>
             );
           })}
-        </ul>
+        </div>
+
+        {/* Admin Section */}
+        {adminItems.some(item => isAdminAccessible(item.permission)) && (
+          <div className="pt-4 mt-4 border-t border-gray-200">
+            {!collapsed && (
+              <p className="text-xs font-medium text-gray-500 mb-2 px-3">ADMINISTRATION</p>
+            )}
+            <div className="space-y-1">
+              {adminItems.map((item) => {
+                const Icon = item.icon;
+                const accessible = isAdminAccessible(item.permission);
+                
+                if (!accessible) return null;
+                
+                return (
+                  <Button
+                    key={item.id}
+                    variant={activeTab === item.id ? "default" : "ghost"}
+                    className={`w-full justify-start ${
+                      collapsed ? 'px-2' : 'px-3'
+                    }`}
+                    onClick={() => setActiveTab(item.id)}
+                    title={collapsed ? item.name : undefined}
+                  >
+                    <Icon className={`h-4 w-4 ${collapsed ? '' : 'mr-3'}`} />
+                    {!collapsed && <span className="flex-1 text-left">{item.name}</span>}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </nav>
 
-      <div className="p-4 border-t border-blue-200">
-        <div className="text-center">
-          <p className="text-xs text-gray-500">© 2024 Chandaria Shah & Associates</p>
-          <p className="text-xs text-blue-600">Professional Tax Services</p>
-        </div>
+      {/* Footer */}
+      <div className="p-4 border-t border-gray-200">
+        <Button
+          variant="ghost"
+          className={`w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 ${
+            collapsed ? 'px-2' : 'px-3'
+          }`}
+          onClick={handleSignOut}
+          title={collapsed ? "Sign Out" : undefined}
+        >
+          <LogOut className={`h-4 w-4 ${collapsed ? '' : 'mr-3'}`} />
+          {!collapsed && <span>Sign Out</span>}
+        </Button>
       </div>
     </div>
   );

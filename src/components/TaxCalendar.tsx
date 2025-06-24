@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,13 +16,18 @@ import {
 } from "lucide-react";
 import { KenyaTaxObligations } from "./KenyaTaxObligations";
 import { AddTaxObligation } from "./AddTaxObligation";
+import { useAuth } from "@/hooks/useAuth";
+import { useTaxObligations } from "@/hooks/useTaxObligations";
 
 export const TaxCalendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date(2024, 0, 1));
   const [activeView, setActiveView] = useState("calendar");
   const [showAddObligation, setShowAddObligation] = useState(false);
+  const { isDemoMode } = useAuth();
+  const { taxObligations } = useTaxObligations();
 
-  const taxEvents = [
+  // Demo tax events - only shown in demo mode
+  const demoTaxEvents = [
     {
       date: 9,
       title: "PAYE Returns Due",
@@ -68,6 +74,30 @@ export const TaxCalendar = () => {
       form: "IT1"
     }
   ];
+
+  // Convert real tax obligations to calendar events
+  const realTaxEvents = taxObligations.map(obligation => {
+    const dueDate = new Date(obligation.due_date);
+    return {
+      date: dueDate.getDate(),
+      title: obligation.title,
+      type: obligation.tax_type,
+      status: obligation.status,
+      clients: [obligation.client_name || 'Unknown Client'],
+      authority: "KRA",
+      form: obligation.tax_type.toUpperCase()
+    };
+  }).filter(event => {
+    const eventDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), event.date);
+    return taxObligations.some(obligation => {
+      const obligationDate = new Date(obligation.due_date);
+      return obligationDate.getMonth() === currentDate.getMonth() && 
+             obligationDate.getFullYear() === currentDate.getFullYear();
+    });
+  });
+
+  // Use demo events in demo mode, real events otherwise
+  const taxEvents = isDemoMode ? demoTaxEvents : realTaxEvents;
 
   const monthNames = [
     "January", "February", "March", "April", "May", "June",
@@ -141,11 +171,13 @@ export const TaxCalendar = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'critical':
+      case 'overdue':
         return 'bg-red-100 text-red-800';
       case 'upcoming':
-        return 'bg-orange-100 text-orange-800';
       case 'pending':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-orange-100 text-orange-800';
+      case 'completed':
+        return 'bg-green-100 text-green-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -162,7 +194,14 @@ export const TaxCalendar = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold text-gray-900">Tax Calendar</h2>
+        <div className="flex items-center space-x-3">
+          <h2 className="text-3xl font-bold text-gray-900">Tax Calendar</h2>
+          {isDemoMode && (
+            <Badge variant="secondary" className="text-orange-600 border-orange-600 bg-orange-50">
+              Demo Data
+            </Badge>
+          )}
+        </div>
         <div className="flex space-x-2">
           <Button variant="outline" onClick={() => setShowAddObligation(true)}>
             <Plus className="h-4 w-4 mr-2" />
@@ -191,110 +230,130 @@ export const TaxCalendar = () => {
         </TabsList>
 
         <TabsContent value="calendar" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-xl">
-                      {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-                    </CardTitle>
-                    <div className="flex space-x-1">
-                      <Button variant="outline" size="icon" onClick={() => navigateMonth('prev')}>
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="icon" onClick={() => navigateMonth('next')}>
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-7 gap-0 mb-2">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                      <div key={day} className="p-2 text-center text-sm font-medium text-gray-600 border border-gray-200 bg-gray-50">
-                        {day}
+          {!isDemoMode && taxEvents.length === 0 ? (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <CalendarIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No Tax Obligations</h3>
+                <p className="text-gray-500 mb-4">
+                  Create your first tax obligation to see it on the calendar.
+                </p>
+                <Button onClick={() => setShowAddObligation(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Tax Obligation
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-xl">
+                        {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+                      </CardTitle>
+                      <div className="flex space-x-1">
+                        <Button variant="outline" size="icon" onClick={() => navigateMonth('prev')}>
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="icon" onClick={() => navigateMonth('next')}>
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
                       </div>
-                    ))}
-                  </div>
-                  
-                  <div className="grid grid-cols-7 gap-0">
-                    {renderCalendarDays()}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <AlertCircle className="h-5 w-5" />
-                    <span>Upcoming Deadlines</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {taxEvents
-                      .sort((a, b) => a.date - b.date)
-                      .map((event, index) => (
-                        <div key={index} className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-                          <div className="flex items-start justify-between mb-2">
-                            <h4 className="font-medium text-gray-900">{event.title}</h4>
-                            <Badge className={getStatusColor(event.status)}>
-                              {event.status}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-2">
-                            Due: {monthNames[currentDate.getMonth()]} {event.date}, {currentDate.getFullYear()}
-                          </p>
-                          <div className="text-xs text-gray-500 mb-2">
-                            <span className="font-medium">Authority:</span> {event.authority} | 
-                            <span className="font-medium"> Form:</span> {event.form}
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-xs font-medium text-gray-700">Affected Clients:</p>
-                            {event.clients.map((client, clientIndex) => (
-                              <p key={clientIndex} className="text-xs text-gray-600">• {client}</p>
-                            ))}
-                          </div>
-                          <div className="mt-3 flex space-x-2">
-                            <Button variant="outline" size="sm">
-                              <FileText className="h-3 w-3 mr-1" />
-                              Details
-                            </Button>
-                            <Button variant="outline" size="sm">
-                              <AlertCircle className="h-3 w-3 mr-1" />
-                              Remind
-                            </Button>
-                          </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-7 gap-0 mb-2">
+                      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                        <div key={day} className="p-2 text-center text-sm font-medium text-gray-600 border border-gray-200 bg-gray-50">
+                          {day}
                         </div>
                       ))}
-                  </div>
-                </CardContent>
-              </Card>
+                    </div>
+                    
+                    <div className="grid grid-cols-7 gap-0">
+                      {renderCalendarDays()}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
 
-              <Card className="mt-4">
-                <CardHeader>
-                  <CardTitle className="text-sm">Status Legend</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-red-500 rounded"></div>
-                    <span className="text-xs">Critical (Due soon)</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-orange-500 rounded"></div>
-                    <span className="text-xs">Upcoming</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-blue-500 rounded"></div>
-                    <span className="text-xs">Pending</span>
-                  </div>
-                </CardContent>
-              </Card>
+              <div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <AlertCircle className="h-5 w-5" />
+                      <span>Upcoming Deadlines</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {taxEvents.length === 0 ? (
+                        <p className="text-gray-500 text-sm">No upcoming deadlines</p>
+                      ) : (
+                        taxEvents
+                          .sort((a, b) => a.date - b.date)
+                          .map((event, index) => (
+                            <div key={index} className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                              <div className="flex items-start justify-between mb-2">
+                                <h4 className="font-medium text-gray-900">{event.title}</h4>
+                                <Badge className={getStatusColor(event.status)}>
+                                  {event.status}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-gray-600 mb-2">
+                                Due: {monthNames[currentDate.getMonth()]} {event.date}, {currentDate.getFullYear()}
+                              </p>
+                              <div className="text-xs text-gray-500 mb-2">
+                                <span className="font-medium">Authority:</span> {event.authority} | 
+                                <span className="font-medium"> Form:</span> {event.form}
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium text-gray-700">Affected Clients:</p>
+                                {event.clients.map((client, clientIndex) => (
+                                  <p key={clientIndex} className="text-xs text-gray-600">• {client}</p>
+                                ))}
+                              </div>
+                              <div className="mt-3 flex space-x-2">
+                                <Button variant="outline" size="sm">
+                                  <FileText className="h-3 w-3 mr-1" />
+                                  Details
+                                </Button>
+                                <Button variant="outline" size="sm">
+                                  <AlertCircle className="h-3 w-3 mr-1" />
+                                  Remind
+                                </Button>
+                              </div>
+                            </div>
+                          ))
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="mt-4">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Status Legend</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-red-500 rounded"></div>
+                      <span className="text-xs">Critical/Overdue</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-orange-500 rounded"></div>
+                      <span className="text-xs">Upcoming/Pending</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-green-500 rounded"></div>
+                      <span className="text-xs">Completed</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
-          </div>
+          )}
         </TabsContent>
 
         <TabsContent value="obligations">
@@ -309,9 +368,10 @@ export const TaxCalendar = () => {
             <CardContent>
               <div className="space-y-4">
                 <p className="text-gray-600">
-                  Comprehensive compliance checking will be available with backend integration.
-                  This will include automated verification of filing status, penalty calculations,
-                  and compliance scoring for each client.
+                  {isDemoMode 
+                    ? "Demo compliance data. Real compliance checking will be available with your live data."
+                    : "Comprehensive compliance checking based on your current tax obligations and client data."
+                  }
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="p-4 border rounded-lg">
