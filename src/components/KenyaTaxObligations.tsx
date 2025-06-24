@@ -6,25 +6,23 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AddTaxObligation } from "@/components/AddTaxObligation";
 import { useAuth } from "@/hooks/useAuth";
-import { demoDataService } from "@/services/demoDataService";
+import { useTaxObligations } from "@/hooks/useTaxObligations";
 import { 
   Plus, 
   Search, 
-  Filter,
   Calendar,
   AlertTriangle,
   CheckCircle,
   Clock,
-  DollarSign
+  DollarSign,
+  Loader2
 } from "lucide-react";
 
 export const KenyaTaxObligations = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const { isDemoMode } = useAuth();
-
-  // Use demo data for demo mode, empty array for real users
-  const obligations = isDemoMode ? demoDataService.getDemoTaxObligations() : [];
+  const { obligations, loading, updateObligation } = useTaxObligations();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -52,6 +50,17 @@ export const KenyaTaxObligations = () => {
     }
   };
 
+  const handleMarkComplete = async (obligationId: string) => {
+    const result = await updateObligation(obligationId, { 
+      status: 'completed',
+      completed_at: new Date().toISOString()
+    });
+    
+    if (result.success) {
+      // Success feedback handled by the hook
+    }
+  };
+
   const filteredObligations = obligations.filter(obligation => {
     const matchesSearch = obligation.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          obligation.description?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -65,6 +74,14 @@ export const KenyaTaxObligations = () => {
     overdue: obligations.filter(o => o.status === "overdue").length,
     completed: obligations.filter(o => o.status === "completed").length,
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -193,21 +210,32 @@ export const KenyaTaxObligations = () => {
                       <Calendar className="h-4 w-4" />
                       <span>Due: {obligation.due_date}</span>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      <DollarSign className="h-4 w-4" />
-                      <span>Amount: KES {obligation.amount?.toLocaleString()}</span>
-                    </div>
+                    {obligation.amount && (
+                      <div className="flex items-center space-x-1">
+                        <DollarSign className="h-4 w-4" />
+                        <span>Amount: KES {obligation.amount?.toLocaleString()}</span>
+                      </div>
+                    )}
                     <div>
                       <span>Type: {obligation.tax_type.replace('_', ' ').toUpperCase()}</span>
                     </div>
+                    {obligation.clients && (
+                      <div>
+                        <span>Client: {obligation.clients.name}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex space-x-2">
                   <Button variant="outline" size="sm">
                     View Details
                   </Button>
-                  {obligation.status !== "completed" && (
-                    <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                  {obligation.status !== "completed" && !isDemoMode && (
+                    <Button 
+                      size="sm" 
+                      className="bg-green-600 hover:bg-green-700"
+                      onClick={() => handleMarkComplete(obligation.id)}
+                    >
                       Mark Complete
                     </Button>
                   )}

@@ -10,17 +10,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { demoDataService } from "@/services/demoDataService";
+import { useClients } from "@/hooks/useClients";
 import { 
   Plus, 
   Search, 
   Filter,
   MoreHorizontal,
   Building,
-  Calendar,
-  AlertCircle,
-  CheckCircle,
-  Save
+  Save,
+  Loader2
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -32,6 +30,7 @@ import {
 export const ClientManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddClientOpen, setIsAddClientOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newClient, setNewClient] = useState({
     name: "",
     email: "",
@@ -42,11 +41,9 @@ export const ClientManagement = () => {
   });
   const { toast } = useToast();
   const { isDemoMode } = useAuth();
+  const { clients, loading, addClient } = useClients();
 
-  // Use demo data for demo mode, empty array for real users
-  const clients = isDemoMode ? demoDataService.getDemoClients() : [];
-
-  const handleAddClient = () => {
+  const handleAddClient = async () => {
     if (!newClient.name || !newClient.email) {
       toast({
         title: "Error",
@@ -56,52 +53,56 @@ export const ClientManagement = () => {
       return;
     }
 
-    toast({
-      title: "Client Added",
-      description: `${newClient.name} has been added successfully.`,
-    });
-
-    // Reset form
-    setNewClient({
-      name: "",
-      email: "",
-      phone: "",
-      address: "",
-      tax_id: "",
-      client_type: "individual"
-    });
-    setIsAddClientOpen(false);
-  };
-
-  const getComplianceColor = (compliance: string) => {
-    switch (compliance) {
-      case "good":
-        return "bg-green-100 text-green-800";
-      case "warning":
-        return "bg-yellow-100 text-yellow-800";
-      case "critical":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
+    if (isDemoMode) {
+      toast({
+        title: "Demo Mode",
+        description: "Cannot add real clients in demo mode. Please sign up for a real account.",
+        variant: "destructive",
+      });
+      return;
     }
-  };
 
-  const getComplianceIcon = (compliance: string) => {
-    switch (compliance) {
-      case "good":
-        return <CheckCircle className="h-4 w-4" />;
-      case "warning":
-      case "critical":
-        return <AlertCircle className="h-4 w-4" />;
-      default:
-        return null;
+    setIsSubmitting(true);
+    const result = await addClient(newClient);
+    
+    if (result.success) {
+      toast({
+        title: "Client Added",
+        description: `${newClient.name} has been added successfully.`,
+      });
+
+      // Reset form
+      setNewClient({
+        name: "",
+        email: "",
+        phone: "",
+        address: "",
+        tax_id: "",
+        client_type: "individual"
+      });
+      setIsAddClientOpen(false);
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to add client. Please try again.",
+        variant: "destructive",
+      });
     }
+    setIsSubmitting(false);
   };
 
   const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     client.tax_id?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -193,9 +194,17 @@ export const ClientManagement = () => {
                 <Button variant="outline" onClick={() => setIsAddClientOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleAddClient} className="bg-green-600 hover:bg-green-700">
-                  <Save className="h-4 w-4 mr-2" />
-                  Add Client
+                <Button 
+                  onClick={handleAddClient} 
+                  className="bg-green-600 hover:bg-green-700"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  {isSubmitting ? "Adding..." : "Add Client"}
                 </Button>
               </div>
             </div>
@@ -253,7 +262,7 @@ export const ClientManagement = () => {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">KRA PIN:</span>
-                  <span className="text-sm font-mono">{client.tax_id}</span>
+                  <span className="text-sm font-mono">{client.tax_id || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Type:</span>

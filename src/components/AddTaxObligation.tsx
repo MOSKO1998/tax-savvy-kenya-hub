@@ -11,8 +11,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { demoDataService } from "@/services/demoDataService";
-import { CalendarIcon, Plus, X, Save } from "lucide-react";
+import { useClients } from "@/hooks/useClients";
+import { useTaxObligations } from "@/hooks/useTaxObligations";
+import { CalendarIcon, Plus, X, Save, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -23,40 +24,28 @@ interface AddTaxObligationProps {
 
 export const AddTaxObligation = ({ onClose, trigger }: AddTaxObligationProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [dueDate, setDueDate] = useState<Date>();
-  const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [selectedClient, setSelectedClient] = useState<string>("");
   const [obligation, setObligation] = useState({
     title: "",
     description: "",
-    tax_authority: "",
-    frequency: "",
-    priority: "medium",
-    penalty_info: "",
-    reminder_days: "7",
-    reference_number: ""
+    tax_type: "",
+    amount: ""
   });
   
   const { toast } = useToast();
   const { isDemoMode } = useAuth();
-
-  // Use demo clients for demo mode, empty array for real users
-  const clients = isDemoMode ? demoDataService.getDemoClients() : [];
+  const { clients } = useClients();
+  const { addObligation } = useTaxObligations();
 
   const handleClose = () => {
     setIsOpen(false);
     if (onClose) onClose();
   };
 
-  const toggleClient = (clientId: string) => {
-    setSelectedClients(prev => 
-      prev.includes(clientId) 
-        ? prev.filter(c => c !== clientId)
-        : [...prev, clientId]
-    );
-  };
-
-  const handleSubmit = () => {
-    if (!obligation.title || !obligation.tax_authority || !dueDate) {
+  const handleSubmit = async () => {
+    if (!obligation.title || !obligation.tax_type || !dueDate) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -65,25 +54,53 @@ export const AddTaxObligation = ({ onClose, trigger }: AddTaxObligationProps) =>
       return;
     }
 
-    toast({
-      title: "Tax Obligation Created",
-      description: `${obligation.title} has been created and assigned to ${selectedClients.length} client(s).`,
-    });
+    if (isDemoMode) {
+      toast({
+        title: "Demo Mode",
+        description: "Cannot add real tax obligations in demo mode. Please sign up for a real account.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    // Reset form
-    setObligation({
-      title: "",
-      description: "",
-      tax_authority: "",
-      frequency: "",
-      priority: "medium",
-      penalty_info: "",
-      reminder_days: "7",
-      reference_number: ""
-    });
-    setSelectedClients([]);
-    setDueDate(undefined);
-    handleClose();
+    setIsSubmitting(true);
+    
+    const obligationData = {
+      title: obligation.title,
+      description: obligation.description,
+      tax_type: obligation.tax_type,
+      due_date: format(dueDate, 'yyyy-MM-dd'),
+      amount: obligation.amount ? parseFloat(obligation.amount) : null,
+      client_id: selectedClient || null,
+      status: 'pending'
+    };
+
+    const result = await addObligation(obligationData);
+    
+    if (result.success) {
+      toast({
+        title: "Tax Obligation Created",
+        description: `${obligation.title} has been created successfully.`,
+      });
+
+      // Reset form
+      setObligation({
+        title: "",
+        description: "",
+        tax_type: "",
+        amount: ""
+      });
+      setSelectedClient("");
+      setDueDate(undefined);
+      handleClose();
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to create tax obligation. Please try again.",
+        variant: "destructive",
+      });
+    }
+    setIsSubmitting(false);
   };
 
   const content = (
@@ -99,17 +116,18 @@ export const AddTaxObligation = ({ onClose, trigger }: AddTaxObligationProps) =>
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="tax-authority">Tax Authority *</Label>
-          <Select value={obligation.tax_authority} onValueChange={(value) => setObligation({ ...obligation, tax_authority: value })}>
+          <Label htmlFor="tax-type">Tax Type *</Label>
+          <Select value={obligation.tax_type} onValueChange={(value) => setObligation({ ...obligation, tax_type: value })}>
             <SelectTrigger>
-              <SelectValue placeholder="Select authority" />
+              <SelectValue placeholder="Select tax type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="kra">KRA (Kenya Revenue Authority)</SelectItem>
-              <SelectItem value="registrar">Registrar of Companies</SelectItem>
-              <SelectItem value="nssf">NSSF</SelectItem>
-              <SelectItem value="nhif">NHIF</SelectItem>
-              <SelectItem value="other">Other</SelectItem>
+              <SelectItem value="vat">VAT</SelectItem>
+              <SelectItem value="paye">PAYE</SelectItem>
+              <SelectItem value="corporate_tax">Corporate Tax</SelectItem>
+              <SelectItem value="withholding_tax">Withholding Tax</SelectItem>
+              <SelectItem value="customs_duty">Customs Duty</SelectItem>
+              <SelectItem value="excise_tax">Excise Tax</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -127,34 +145,6 @@ export const AddTaxObligation = ({ onClose, trigger }: AddTaxObligationProps) =>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="frequency">Frequency *</Label>
-          <Select value={obligation.frequency} onValueChange={(value) => setObligation({ ...obligation, frequency: value })}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select frequency" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="monthly">Monthly</SelectItem>
-              <SelectItem value="quarterly">Quarterly</SelectItem>
-              <SelectItem value="annually">Annually</SelectItem>
-              <SelectItem value="one-time">One-time</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="priority">Priority Level</Label>
-          <Select value={obligation.priority} onValueChange={(value) => setObligation({ ...obligation, priority: value })}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select priority" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="critical">Critical</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="low">Low</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
         <div className="space-y-2">
           <Label>Due Date *</Label>
           <Popover>
@@ -180,71 +170,30 @@ export const AddTaxObligation = ({ onClose, trigger }: AddTaxObligationProps) =>
             </PopoverContent>
           </Popover>
         </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="penalty-info">Penalty Information</Label>
-        <Textarea 
-          id="penalty-info" 
-          value={obligation.penalty_info}
-          onChange={(e) => setObligation({ ...obligation, penalty_info: e.target.value })}
-          placeholder="Describe penalties for late filing or non-compliance"
-          rows={2}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Assign to Clients</Label>
-        <div className="border rounded-lg p-4 max-h-40 overflow-y-auto">
-          {clients.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {clients.map((client) => (
-                <label key={client.id} className="flex items-center space-x-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedClients.includes(client.id)}
-                    onChange={() => toggleClient(client.id)}
-                    className="rounded"
-                  />
-                  <span className="text-sm">{client.name}</span>
-                </label>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500 text-center py-4">
-              {isDemoMode ? "Demo clients will appear here" : "No clients available. Add clients first."}
-            </p>
-          )}
-        </div>
-        <p className="text-xs text-gray-500">
-          Selected: {selectedClients.length} client(s)
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="reminder-days">Reminder (days before due)</Label>
-          <Select value={obligation.reminder_days} onValueChange={(value) => setObligation({ ...obligation, reminder_days: value })}>
+          <Label htmlFor="amount">Amount (KES)</Label>
+          <Input 
+            id="amount" 
+            type="number"
+            value={obligation.amount}
+            onChange={(e) => setObligation({ ...obligation, amount: e.target.value })}
+            placeholder="0.00" 
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="client">Client (Optional)</Label>
+          <Select value={selectedClient} onValueChange={setSelectedClient}>
             <SelectTrigger>
-              <SelectValue placeholder="Select reminder" />
+              <SelectValue placeholder="Select client" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="1">1 day</SelectItem>
-              <SelectItem value="3">3 days</SelectItem>
-              <SelectItem value="7">7 days</SelectItem>
-              <SelectItem value="14">14 days</SelectItem>
-              <SelectItem value="30">30 days</SelectItem>
+              {clients.map((client) => (
+                <SelectItem key={client.id} value={client.id}>
+                  {client.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="reference-number">Reference/Form Number</Label>
-          <Input 
-            id="reference-number" 
-            value={obligation.reference_number}
-            onChange={(e) => setObligation({ ...obligation, reference_number: e.target.value })}
-            placeholder="e.g., ITX Form, P9A Form" 
-          />
         </div>
       </div>
 
@@ -252,9 +201,17 @@ export const AddTaxObligation = ({ onClose, trigger }: AddTaxObligationProps) =>
         <Button variant="outline" onClick={handleClose}>
           Cancel
         </Button>
-        <Button onClick={handleSubmit} className="bg-green-600 hover:bg-green-700">
-          <Save className="h-4 w-4 mr-2" />
-          Create Obligation
+        <Button 
+          onClick={handleSubmit} 
+          className="bg-green-600 hover:bg-green-700"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4 mr-2" />
+          )}
+          {isSubmitting ? "Creating..." : "Create Obligation"}
         </Button>
       </div>
     </div>
