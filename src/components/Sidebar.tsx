@@ -1,251 +1,238 @@
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  LayoutDashboard,
-  Users,
-  FileText,
-  Calendar,
-  FolderOpen,
-  Bell,
-  BarChart3,
-  UserCheck,
-  Shield,
-  Settings,
-  LogOut,
+import { 
+  LayoutDashboard, 
+  Users, 
+  FileText, 
+  Calendar, 
+  Settings, 
+  HelpCircle,
   ChevronLeft,
   ChevronRight,
+  Bell,
+  Shield,
+  BarChart3,
   Building2
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
+import { CSABrand } from "./CSABrand";
 
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  userRole?: any;
 }
 
-export const Sidebar = ({ activeTab, setActiveTab, userRole }: SidebarProps) => {
+export const Sidebar = ({ activeTab, setActiveTab }: SidebarProps) => {
   const [collapsed, setCollapsed] = useState(false);
-  const { signOut, hasPermission, isDemoMode } = useAuth();
+  const { hasPermission, userRole, isDemoMode } = useAuth();
 
-  const menuItems = [
+  const navigationItems = [
     {
       id: "dashboard",
-      name: "Dashboard",
+      label: "Dashboard",
       icon: LayoutDashboard,
-      permission: null,
-      badge: null
+      permission: "view_dashboard"
     },
     {
       id: "clients",
-      name: "Clients",
+      label: "Client Management",
       icon: Users,
-      permission: "client_management",
-      badge: null
+      permission: "manage_clients"
     },
     {
-      id: "obligations",
-      name: "Tax Obligations",
-      icon: FileText,
-      permission: "tax_management",
-      badge: null
-    },
-    {
-      id: "calendar",
-      name: "Tax Calendar",
+      id: "tax-calendar",
+      label: "Tax Calendar",
       icon: Calendar,
-      permission: null,
-      badge: null
+      permission: "view_calendar"
     },
     {
       id: "documents",
-      name: "Documents",
-      icon: FolderOpen,
-      permission: "document_view",
-      badge: null
+      label: "Document Manager",
+      icon: FileText,
+      permission: "manage_documents"
     },
     {
       id: "reports",
-      name: "Reports",
+      label: "Reports",
       icon: BarChart3,
-      permission: "tax_management",
-      badge: "New"
+      permission: "view_reports"
     },
     {
       id: "notifications",
-      name: "Notifications",
+      label: "Notifications",
       icon: Bell,
-      permission: null,
-      badge: null
+      permission: "view_notifications",
+      badge: 3
     }
   ];
 
   const adminItems = [
     {
       id: "users",
-      name: "User Management",
-      icon: UserCheck,
-      permission: "user_management"
+      label: "User Management",
+      icon: Users,
+      permission: "manage_users"
+    },
+    {
+      id: "companies",
+      label: "Companies",
+      icon: Building2,
+      permission: "manage_companies"
     },
     {
       id: "security",
-      name: "Security Dashboard",
+      label: "Security Dashboard",
       icon: Shield,
-      permission: "system_settings"
+      permission: "view_security"
     },
     {
-      id: "settings",
-      name: "Settings",
+      id: "system-health",
+      label: "System Health",
       icon: Settings,
-      permission: "system_settings"
+      permission: "view_system"
     }
   ];
 
-  const handleSignOut = async () => {
-    await signOut();
-  };
+  const bottomItems = [
+    {
+      id: "settings",
+      label: "Settings",
+      icon: Settings,
+      permission: "view_settings"
+    },
+    {
+      id: "help",
+      label: "Help & Support",
+      icon: HelpCircle,
+      permission: "view_help"
+    }
+  ];
 
-  const isAccessible = (permission: string | null) => {
-    if (!permission) return true;
-    return hasPermission(permission) || hasPermission('view_only') || isDemoMode;
-  };
-
-  const isAdminAccessible = (permission: string) => {
-    return hasPermission(permission) || hasPermission('all');
-  };
+  const hasAdminPermissions = hasPermission('all') || userRole?.role === 'admin';
 
   return (
     <div className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ${
       collapsed ? 'w-16' : 'w-64'
     }`}>
-      {/* Header */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
           {!collapsed && (
             <div className="flex items-center space-x-2">
-              <Building2 className="h-6 w-6 text-blue-600" />
-              <span className="text-lg font-semibold text-gray-900">CS&A Hub</span>
+              <CSABrand />
+              {isDemoMode && (
+                <Badge variant="secondary" className="text-xs">Demo</Badge>
+              )}
             </div>
           )}
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setCollapsed(!collapsed)}
-            className="text-gray-500 hover:text-gray-700"
+            className="h-8 w-8"
           >
             {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </Button>
         </div>
       </div>
 
-      {/* User Info */}
-      {!collapsed && userRole && (
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-              {userRole.name?.charAt(0)?.toUpperCase() || 'U'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
-                {userRole.name}
-              </p>
-              <p className="text-xs text-gray-500 truncate">
-                {userRole.role} - {userRole.department}
-              </p>
-            </div>
-          </div>
-          {isDemoMode && (
-            <Badge variant="secondary" className="mt-2 text-orange-600 border-orange-600 bg-orange-50">
-              Demo Mode
-            </Badge>
-          )}
-        </div>
-      )}
-
-      {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
-        {/* Main Menu */}
-        <div className="space-y-1">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const accessible = isAccessible(item.permission);
-            
-            return (
-              <Button
-                key={item.id}
-                variant={activeTab === item.id ? "default" : "ghost"}
-                className={`w-full justify-start ${
-                  collapsed ? 'px-2' : 'px-3'
-                } ${!accessible ? 'opacity-50 cursor-not-allowed' : ''}`}
-                onClick={() => accessible && setActiveTab(item.id)}
-                disabled={!accessible}
-                title={collapsed ? item.name : undefined}
-              >
-                <Icon className={`h-4 w-4 ${collapsed ? '' : 'mr-3'}`} />
-                {!collapsed && (
-                  <>
-                    <span className="flex-1 text-left">{item.name}</span>
-                    {item.badge && (
-                      <Badge variant="secondary" className="ml-2 text-xs">
-                        {item.badge}
-                      </Badge>
-                    )}
-                  </>
-                )}
-              </Button>
-            );
-          })}
-        </div>
-
-        {/* Admin Section */}
-        {adminItems.some(item => isAdminAccessible(item.permission)) && (
-          <div className="pt-4 mt-4 border-t border-gray-200">
+      <div className="flex-1 overflow-y-auto">
+        <nav className="p-4 space-y-2">
+          {/* Main Navigation */}
+          <div className="space-y-1">
             {!collapsed && (
-              <p className="text-xs font-medium text-gray-500 mb-2 px-3">ADMINISTRATION</p>
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                Main
+              </h3>
             )}
-            <div className="space-y-1">
+            {navigationItems.map((item) => {
+              if (!hasPermission(item.permission) && !hasPermission('all')) return null;
+              
+              const Icon = item.icon;
+              return (
+                <Button
+                  key={item.id}
+                  variant={activeTab === item.id ? "default" : "ghost"}
+                  className={`w-full justify-start ${collapsed ? 'px-3' : 'px-3'}`}
+                  onClick={() => setActiveTab(item.id)}
+                >
+                  <Icon className="h-4 w-4" />
+                  {!collapsed && (
+                    <>
+                      <span className="ml-3">{item.label}</span>
+                      {item.badge && (
+                        <Badge className="ml-auto bg-red-500 text-white text-xs">
+                          {item.badge}
+                        </Badge>
+                      )}
+                    </>
+                  )}
+                </Button>
+              );
+            })}
+          </div>
+
+          {/* Admin Section */}
+          {hasAdminPermissions && (
+            <div className="space-y-1 pt-4">
+              {!collapsed && (
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  Administration
+                </h3>
+              )}
               {adminItems.map((item) => {
                 const Icon = item.icon;
-                const accessible = isAdminAccessible(item.permission);
-                
-                if (!accessible) return null;
-                
                 return (
                   <Button
                     key={item.id}
                     variant={activeTab === item.id ? "default" : "ghost"}
-                    className={`w-full justify-start ${
-                      collapsed ? 'px-2' : 'px-3'
-                    }`}
+                    className={`w-full justify-start ${collapsed ? 'px-3' : 'px-3'}`}
                     onClick={() => setActiveTab(item.id)}
-                    title={collapsed ? item.name : undefined}
                   >
-                    <Icon className={`h-4 w-4 ${collapsed ? '' : 'mr-3'}`} />
-                    {!collapsed && <span className="flex-1 text-left">{item.name}</span>}
+                    <Icon className="h-4 w-4" />
+                    {!collapsed && <span className="ml-3">{item.label}</span>}
                   </Button>
                 );
               })}
             </div>
-          </div>
-        )}
-      </nav>
-
-      {/* Footer */}
-      <div className="p-4 border-t border-gray-200">
-        <Button
-          variant="ghost"
-          className={`w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 ${
-            collapsed ? 'px-2' : 'px-3'
-          }`}
-          onClick={handleSignOut}
-          title={collapsed ? "Sign Out" : undefined}
-        >
-          <LogOut className={`h-4 w-4 ${collapsed ? '' : 'mr-3'}`} />
-          {!collapsed && <span>Sign Out</span>}
-        </Button>
+          )}
+        </nav>
       </div>
+
+      {/* Bottom Section */}
+      <div className="p-4 border-t border-gray-200 space-y-1">
+        {bottomItems.map((item) => {
+          if (!hasPermission(item.permission) && !hasPermission('all')) return null;
+          
+          const Icon = item.icon;
+          return (
+            <Button
+              key={item.id}
+              variant={activeTab === item.id ? "default" : "ghost"}
+              className={`w-full justify-start ${collapsed ? 'px-3' : 'px-3'}`}
+              onClick={() => setActiveTab(item.id)}
+            >
+              <Icon className="h-4 w-4" />
+              {!collapsed && <span className="ml-3">{item.label}</span>}
+            </Button>
+          );
+        })}
+      </div>
+
+      {/* User Info */}
+      {!collapsed && (
+        <div className="p-4 border-t border-gray-200 bg-gray-50">
+          <div className="text-sm">
+            <p className="font-medium text-gray-900">
+              {userRole?.name || 'User'}
+            </p>
+            <p className="text-gray-500 capitalize">
+              {userRole?.role || 'readonly'} • {userRole?.department || 'tax'}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

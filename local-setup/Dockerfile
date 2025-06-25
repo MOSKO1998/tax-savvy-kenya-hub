@@ -19,8 +19,10 @@ RUN npm run build
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nextjs -u 1001
 
-# Change ownership of the app directory
+# Create necessary directories
+RUN mkdir -p /app/logs /app/uploads
 RUN chown -R nextjs:nodejs /app
+
 USER nextjs
 
 # Expose port
