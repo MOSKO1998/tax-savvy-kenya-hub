@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,19 +41,37 @@ export const Login = () => {
     setIsLoading(true);
     
     try {
+      console.log('Login attempt for:', loginData.email);
       const { error } = await signIn(loginData.email, loginData.password);
       
       if (error) {
+        console.error('Login error:', error);
+        let errorMessage = error.message;
+        
+        // Provide more user-friendly error messages
+        if (error.message?.includes('Invalid login credentials')) {
+          errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+        } else if (error.message?.includes('Email not confirmed')) {
+          errorMessage = 'Please check your email and click the confirmation link before signing in.';
+        }
+        
         toast({
           title: "Login Failed",
-          description: error.message,
+          description: errorMessage,
           variant: "destructive",
+        });
+      } else {
+        console.log('Login successful');
+        toast({
+          title: "Welcome!",
+          description: "You have been successfully logged in.",
         });
       }
     } catch (error) {
+      console.error('Login exception:', error);
       toast({
         title: "Login Failed",
-        description: "An unexpected error occurred",
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -65,6 +84,30 @@ export const Login = () => {
     setIsLoading(true);
     
     try {
+      console.log('Signup attempt for:', signupData.email);
+      
+      // Validate required fields
+      if (!signupData.email || !signupData.password || !signupData.fullName || !signupData.username || !signupData.companyName) {
+        toast({
+          title: "Validation Error",
+          description: "Please fill in all required fields.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Validate password strength
+      if (signupData.password.length < 6) {
+        toast({
+          title: "Password Too Short",
+          description: "Password must be at least 6 characters long.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+      
       const { error } = await signUp(
         signupData.email, 
         signupData.password, 
@@ -76,21 +119,50 @@ export const Login = () => {
       );
       
       if (error) {
+        console.error('Signup error:', error);
+        let errorMessage = error.message;
+        
+        // Provide more user-friendly error messages
+        if (error.message?.includes('User already registered')) {
+          errorMessage = 'An account with this email already exists. Please try signing in instead.';
+        } else if (error.message?.includes('Password should be at least')) {
+          errorMessage = 'Password must be at least 6 characters long.';
+        } else if (error.message?.includes('Unable to validate email address')) {
+          errorMessage = 'Please enter a valid email address.';
+        } else if (error.message?.toLowerCase().includes('database')) {
+          errorMessage = 'There was an issue creating your account. Please try again or contact support if the problem persists.';
+        }
+        
         toast({
           title: "Signup Failed",
-          description: error.message,
+          description: errorMessage,
           variant: "destructive",
         });
       } else {
+        console.log('Signup successful');
         toast({
           title: "Account Created!",
-          description: "Please check your email to verify your account.",
+          description: "Your account has been created successfully. You can now sign in.",
+        });
+        
+        // Switch to login tab and pre-fill email
+        setActiveTab("login");
+        setLoginData(prev => ({ ...prev, email: signupData.email }));
+        
+        // Clear signup form
+        setSignupData({
+          email: "",
+          password: "",
+          fullName: "",
+          username: "",
+          companyName: ""
         });
       }
     } catch (error) {
+      console.error('Signup exception:', error);
       toast({
         title: "Signup Failed",
-        description: "An unexpected error occurred",
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -102,6 +174,7 @@ export const Login = () => {
     setIsLoading(true);
     
     try {
+      console.log('Demo login attempt');
       const { error } = await signIn(demoAccount.email, demoAccount.password);
       
       if (error) {
@@ -110,8 +183,14 @@ export const Login = () => {
           description: "Demo account not available. Please create a new account.",
           variant: "destructive",
         });
+      } else {
+        toast({
+          title: "Demo Mode",
+          description: "You are now logged in with demo data.",
+        });
       }
     } catch (error) {
+      console.error('Demo login exception:', error);
       toast({
         title: "Demo Login Failed",
         description: "An unexpected error occurred",
@@ -227,7 +306,7 @@ export const Login = () => {
               <TabsContent value="signup" className="space-y-4 mt-6">
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email Address</Label>
+                    <Label htmlFor="signup-email">Email Address *</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                       <Input
@@ -243,7 +322,7 @@ export const Login = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="full-name">Full Name</Label>
+                    <Label htmlFor="full-name">Full Name *</Label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                       <Input
@@ -259,7 +338,7 @@ export const Login = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="username">Username</Label>
+                    <Label htmlFor="username">Username *</Label>
                     <div className="relative">
                       <UserPlus className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                       <Input
@@ -275,7 +354,7 @@ export const Login = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="company-name">Company Name</Label>
+                    <Label htmlFor="company-name">Company Name *</Label>
                     <div className="relative">
                       <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                       <Input
@@ -291,7 +370,7 @@ export const Login = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
+                    <Label htmlFor="signup-password">Password * (min. 6 characters)</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                       <Input
@@ -302,6 +381,7 @@ export const Login = () => {
                         value={signupData.password}
                         onChange={(e) => setSignupData(prev => ({ ...prev, password: e.target.value }))}
                         required
+                        minLength={6}
                       />
                       <button
                         type="button"

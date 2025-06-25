@@ -53,12 +53,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
           // Check if it's demo mode
           if (session.user.email === 'demo@chandariashah.com') {
+            console.log('Demo mode activated');
             setIsDemoMode(true);
             setUserRole(createDemoUser());
           } else {
@@ -69,7 +71,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // Fetch user role and profile data with timeout
             setTimeout(async () => {
               try {
-                const { data: profile } = await supabase
+                console.log('Fetching user profile for:', session.user.id);
+                const { data: profile, error } = await supabase
                   .from('profiles')
                   .select(`
                     *,
@@ -83,7 +86,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   .eq('id', session.user.id)
                   .single();
                 
-                if (profile) {
+                if (error) {
+                  console.error('Error fetching user profile:', error);
+                } else if (profile) {
+                  console.log('User profile loaded:', profile);
                   setUserRole({
                     id: profile.id,
                     name: profile.full_name,
@@ -111,6 +117,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       if (!session) {
@@ -123,6 +130,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log('Attempting sign in for:', email);
+      
       // Handle demo login
       if (email === 'demo@chandariashah.com' && password === 'demo123') {
         // Create a properly structured mock user for demo mode
@@ -160,6 +169,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUserRole(createDemoUser());
         setLoading(false);
         
+        console.log('Demo login successful');
         return { error: null };
       }
 
@@ -169,49 +179,75 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
       
       if (error) {
+        console.error('Sign in error:', error);
         monitorFailedLogins(email);
+      } else {
+        console.log('Sign in successful for:', email);
       }
       
       return { error };
     } catch (error) {
+      console.error('Sign in exception:', error);
       monitorFailedLogins(email);
       return { error };
     }
   };
 
   const signUp = async (email: string, password: string, fullName: string, metadata: any = {}) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          full_name: fullName,
-          username: metadata.username,
-          company_name: metadata.company_name,
+    try {
+      console.log('Attempting sign up for:', email, 'with metadata:', metadata);
+      
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            full_name: fullName,
+            username: metadata.username,
+            company_name: metadata.company_name,
+          },
         },
-      },
-    });
-    return { error };
+      });
+      
+      if (error) {
+        console.error('Sign up error:', error);
+      } else {
+        console.log('Sign up successful for:', email);
+      }
+      
+      return { error };
+    } catch (error) {
+      console.error('Sign up exception:', error);
+      return { error };
+    }
   };
 
   const signOut = async () => {
-    if (isDemoMode) {
-      // Handle demo logout
+    try {
+      console.log('Signing out user');
+      
+      if (isDemoMode) {
+        // Handle demo logout
+        setUser(null);
+        setSession(null);
+        setUserRole(null);
+        setIsDemoMode(false);
+        console.log('Demo logout successful');
+        return;
+      }
+      
+      await supabase.auth.signOut();
       setUser(null);
       setSession(null);
       setUserRole(null);
       setIsDemoMode(false);
-      return;
+      console.log('Sign out successful');
+    } catch (error) {
+      console.error('Sign out error:', error);
     }
-    
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setUserRole(null);
-    setIsDemoMode(false);
   };
 
   const hasPermission = (permission: string) => {
