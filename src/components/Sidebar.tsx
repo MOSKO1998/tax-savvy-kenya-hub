@@ -120,7 +120,7 @@ export const Sidebar = ({ activeTab, setActiveTab, userRole }: SidebarProps) => 
         <div className="flex items-center justify-between">
           {!collapsed && (
             <div className="flex items-center space-x-2">
-              <CSABrand />
+              <CSABrand showFullName={true} />
               {isDemoMode && (
                 <Badge variant="secondary" className="text-xs">Demo</Badge>
               )}

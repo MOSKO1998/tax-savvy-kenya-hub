@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { DashboardOverview } from "@/components/DashboardOverview";
@@ -77,7 +76,7 @@ const Index = () => {
         return hasPermission('tax_management') || hasPermission('view_only') || isDemoMode
           ? <KenyaTaxObligations />
           : <div className="p-6 text-center text-red-600">Access Denied - Insufficient Permissions</div>;
-      case "calendar":
+      case "tax-calendar":
         return <TaxCalendar />;
       case "documents":
         return hasPermission('document_view') || hasPermission('view_only') || isDemoMode

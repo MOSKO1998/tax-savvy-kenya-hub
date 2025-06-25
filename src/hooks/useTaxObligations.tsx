@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { demoDataService } from '@/services/demoDataService';
 
 export const useTaxObligations = () => {
   const [obligations, setObligations] = useState<any[]>([]);
@@ -16,9 +15,10 @@ export const useTaxObligations = () => {
   const fetchObligations = async () => {
     setLoading(true);
     
+    // Always start fresh - no demo data
     if (isDemoMode) {
-      console.log('Loading demo tax obligations');
-      setObligations(demoDataService.getDemoTaxObligations());
+      console.log('Demo mode: Using empty obligations for fresh start');
+      setObligations([]);
       setLoading(false);
       return;
     }
@@ -42,7 +42,7 @@ export const useTaxObligations = () => {
             name
           )
         `)
-        .order('created_at', { ascending: false });
+        .order('due_date', { ascending: true });
 
       if (error) {
         console.error('Error fetching tax obligations:', error);
@@ -76,7 +76,8 @@ export const useTaxObligations = () => {
         .from('tax_obligations')
         .insert([{
           ...obligationData,
-          created_by: user.id
+          created_by: user.id,
+          due_date: obligationData.due_date.toISOString().split('T')[0] // Format as date
         }])
         .select(`
           *,
@@ -93,7 +94,7 @@ export const useTaxObligations = () => {
       }
       
       console.log('Tax obligation added successfully:', data);
-      setObligations(prev => [data, ...prev]);
+      setObligations(prev => [...prev, data]);
       return { success: true, data };
     } catch (error) {
       console.error('Error adding obligation:', error);
@@ -110,9 +111,16 @@ export const useTaxObligations = () => {
     try {
       console.log('Updating tax obligation:', id, updates);
       
+      const updateData = {
+        ...updates,
+        due_date: updates.due_date instanceof Date 
+          ? updates.due_date.toISOString().split('T')[0] 
+          : updates.due_date
+      };
+      
       const { data, error } = await supabase
         .from('tax_obligations')
-        .update(updates)
+        .update(updateData)
         .eq('id', id)
         .select(`
           *,
