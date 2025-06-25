@@ -5,7 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { CSABrand } from "./CSABrand";
 
-export const Header = () => {
+interface HeaderProps {
+  userRole: any;
+}
+
+export const Header = ({ userRole }: HeaderProps) => {
   const { user, signOut, isDemoMode } = useAuth();
 
   const handleSignOut = async () => {
@@ -53,7 +57,7 @@ export const Header = () => {
             <div className="flex items-center space-x-2">
               <User className="h-5 w-5 text-gray-600" />
               <span className="text-sm font-medium text-gray-700">
-                {user?.email || 'Guest'}
+                {userRole?.name || user?.email || 'Guest'}
               </span>
             </div>
             <Button 

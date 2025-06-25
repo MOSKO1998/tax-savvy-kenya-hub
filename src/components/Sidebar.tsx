@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { 
   LayoutDashboard, 
@@ -22,11 +21,12 @@ import { CSABrand } from "./CSABrand";
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  userRole: any;
 }
 
-export const Sidebar = ({ activeTab, setActiveTab }: SidebarProps) => {
+export const Sidebar = ({ activeTab, setActiveTab, userRole }: SidebarProps) => {
   const [collapsed, setCollapsed] = useState(false);
-  const { hasPermission, userRole, isDemoMode } = useAuth();
+  const { hasPermission, isDemoMode } = useAuth();
 
   const navigationItems = [
     {
