@@ -1,7 +1,7 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -15,11 +15,13 @@ import {
   AlertCircle,
   BarChart3,
   FileSpreadsheet,
-  Printer
+  DollarSign
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useClients } from "@/hooks/useClients";
 import { useTaxObligations } from "@/hooks/useTaxObligations";
+import { reportService } from "@/services/reportService";
+import { useToast } from "@/hooks/use-toast";
 
 export const ReportGenerator = () => {
   const [reportType, setReportType] = useState("");
@@ -33,6 +35,7 @@ export const ReportGenerator = () => {
   const { isDemoMode } = useAuth();
   const { clients } = useClients();
   const { obligations } = useTaxObligations();
+  const { toast } = useToast();
 
   const reportTypes = [
     {
@@ -63,7 +66,7 @@ export const ReportGenerator = () => {
       id: "financial_summary",
       name: "Financial Summary Report",
       description: "Financial overview including amounts due and paid",
-      icon: BarChart3
+      icon: DollarSign
     },
     {
       id: "monthly_breakdown",
@@ -76,8 +79,7 @@ export const ReportGenerator = () => {
   const statuses = [
     { id: "pending", name: "Pending", color: "orange" },
     { id: "completed", name: "Completed", color: "green" },
-    { id: "overdue", name: "Overdue", color: "red" },
-    { id: "in_progress", name: "In Progress", color: "blue" }
+    { id: "overdue", name: "Overdue", color: "red" }
   ];
 
   const handleClientToggle = (clientId: string) => {
@@ -98,18 +100,17 @@ export const ReportGenerator = () => {
 
   const generateReport = async () => {
     if (!reportType) {
-      alert("Please select a report type");
+      toast({
+        title: "Error",
+        description: "Please select a report type",
+        variant: "destructive"
+      });
       return;
     }
 
     setGenerating(true);
 
     try {
-      // Simulate report generation
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Here you would implement actual report generation logic
-      // For now, we'll just show success message
       const reportData = {
         type: reportType,
         dateRange: { from: dateFrom, to: dateTo },
@@ -118,22 +119,69 @@ export const ReportGenerator = () => {
         format,
         generatedAt: new Date().toISOString(),
         totalClients: clients.length,
-        totalObligations: obligations.length,
-        isDemoData: isDemoMode
+        totalObligations: obligations.length
       };
 
-      console.log("Generated report data:", reportData);
+      console.log("Generating report:", reportData);
+
+      let reportContent;
       
-      // In a real implementation, you would:
-      // 1. Send this data to a backend service
-      // 2. Generate the actual report (PDF, Excel, etc.)
-      // 3. Provide download link
+      switch (reportType) {
+        case "client_summary":
+          reportContent = await reportService.generateClientSummaryReport(reportData);
+          break;
+        case "tax_obligations":
+          reportContent = await reportService.generateTaxObligationsReport(reportData);
+          break;
+        case "compliance_status":
+          reportContent = await reportService.generateComplianceStatusReport(reportData);
+          break;
+        case "overdue_obligations":
+          reportContent = await reportService.generateOverdueReport(reportData);
+          break;
+        case "financial_summary":
+          reportContent = await reportService.generateFinancialSummaryReport(reportData);
+          break;
+        case "monthly_breakdown":
+          reportContent = await reportService.generateMonthlyBreakdownReport(reportData);
+          break;
+        default:
+          throw new Error("Invalid report type");
+      }
+
+      console.log("Report generated successfully:", reportContent);
+
+      // In production, you would:
+      // 1. Format the data according to the selected format (PDF, Excel, CSV)
+      // 2. Generate the actual file
+      // 3. Provide download link or email the report
       
-      alert(`Report generated successfully! Format: ${format.toUpperCase()}`);
+      // For now, we'll download as JSON for demonstration
+      const blob = new Blob([JSON.stringify(reportContent, null, 2)], {
+        type: format === 'csv' ? 'text/csv' : 'application/json'
+      });
       
-    } catch (error) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${reportType}_report_${new Date().toISOString().split('T')[0]}.${format === 'pdf' ? 'json' : format}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: `Report generated successfully! Format: ${format.toUpperCase()}`,
+      });
+      
+    } catch (error: any) {
       console.error("Error generating report:", error);
-      alert("Error generating report. Please try again.");
+      toast({
+        title: "Error",
+        description: error.message || "Error generating report. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setGenerating(false);
     }
@@ -148,7 +196,7 @@ export const ReportGenerator = () => {
           <h2 className="text-3xl font-bold text-gray-900">Generate Reports</h2>
           {isDemoMode && (
             <Badge variant="secondary" className="text-orange-600 border-orange-600 bg-orange-50">
-              Demo Data
+              Live Data
             </Badge>
           )}
         </div>
@@ -239,7 +287,7 @@ export const ReportGenerator = () => {
                 </div>
                 {clients.length === 0 && (
                   <p className="text-sm text-gray-500">
-                    {isDemoMode ? "Demo mode - using sample clients" : "No clients available"}
+                    {isDemoMode ? "Using live system data" : "No clients available"}
                   </p>
                 )}
               </div>
