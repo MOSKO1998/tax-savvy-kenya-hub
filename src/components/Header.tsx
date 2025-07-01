@@ -1,16 +1,16 @@
 
-import { Bell, Search, Settings, LogOut, User } from "lucide-react";
+import { Bell, Search, Settings, LogOut, User, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { CSABrand } from "./CSABrand";
 
 interface HeaderProps {
-  userRole: any;
+  setSidebarOpen: (open: boolean) => void;
 }
 
-export const Header = ({ userRole }: HeaderProps) => {
-  const { user, signOut, isDemoMode } = useAuth();
+export const Header = ({ setSidebarOpen }: HeaderProps) => {
+  const { user, signOut, isDemoMode, userRole } = useAuth();
 
   const handleSignOut = async () => {
     try {
@@ -24,6 +24,14 @@ export const Header = ({ userRole }: HeaderProps) => {
     <header className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
           <CSABrand />
           {isDemoMode && (
             <Badge variant="secondary" className="text-orange-600 border-orange-600 bg-orange-50">

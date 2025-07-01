@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Header } from "@/components/Header";
@@ -14,7 +15,7 @@ import { Settings } from "@/components/Settings";
 import { useNavigate } from "react-router-dom";
 
 const Index = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, userRole } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -24,6 +25,38 @@ const Index = () => {
       navigate("/auth");
     }
   }, [user, loading, navigate]);
+
+  const handleQuickAction = (action: string) => {
+    switch (action) {
+      case 'clients':
+        setActiveTab('clients');
+        break;
+      case 'obligations':
+        setActiveTab('obligations');
+        break;
+      case 'documents':
+        setActiveTab('documents');
+        break;
+      case 'tax-calendar':
+      case 'calendar':
+        setActiveTab('calendar');
+        break;
+      case 'reports':
+        setActiveTab('reports');
+        break;
+      case 'notifications':
+        setActiveTab('notifications');
+        break;
+      case 'settings':
+        setActiveTab('settings');
+        break;
+      case 'system-health':
+        setActiveTab('system-health');
+        break;
+      default:
+        setActiveTab('dashboard');
+    }
+  };
 
   if (loading) {
     return (
@@ -43,7 +76,7 @@ const Index = () => {
   const renderActiveTab = () => {
     switch (activeTab) {
       case "dashboard":
-        return <DashboardOverview />;
+        return <DashboardOverview onQuickAction={handleQuickAction} userRole={userRole} />;
       case "clients":
         return <ClientManagement />;
       case "obligations":
@@ -61,7 +94,7 @@ const Index = () => {
       case "settings":
         return <Settings />;
       default:
-        return <DashboardOverview />;
+        return <DashboardOverview onQuickAction={handleQuickAction} userRole={userRole} />;
     }
   };
 
