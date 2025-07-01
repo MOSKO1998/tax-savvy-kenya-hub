@@ -57,7 +57,7 @@ export const KenyaTaxObligations = () => {
     due_date: new Date(),
     client_id: '',
     amount: 0,
-    status: 'pending' as const,
+    status: 'pending' as 'pending' | 'completed' | 'overdue',
     reminder_emails: [] as string[]
   });
 

@@ -10,7 +10,7 @@ import {
   AlertTriangle, 
   Info, 
   X,
-  MarkAsUnreadIcon,
+  Mail,
   Trash2,
   Settings
 } from "lucide-react";

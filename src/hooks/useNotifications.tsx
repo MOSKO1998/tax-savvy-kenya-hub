@@ -13,6 +13,22 @@ interface Notification {
   created_at: string;
 }
 
+const mapNotificationType = (dbType: string): 'info' | 'warning' | 'error' | 'success' => {
+  switch (dbType) {
+    case 'system_alert':
+    case 'deadline_reminder':
+      return 'warning';
+    case 'compliance_update':
+      return 'info';
+    case 'document_uploaded':
+      return 'success';
+    case 'user_action':
+      return 'info';
+    default:
+      return 'info';
+  }
+};
+
 export const useNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,8 +51,13 @@ export const useNotifications = () => {
 
       if (error) throw error;
 
-      setNotifications(data || []);
-      setUnreadCount(data?.filter(n => !n.read).length || 0);
+      const mappedNotifications = (data || []).map(n => ({
+        ...n,
+        type: mapNotificationType(n.type)
+      }));
+
+      setNotifications(mappedNotifications);
+      setUnreadCount(mappedNotifications.filter(n => !n.read).length);
     } catch (error) {
       console.error('Error fetching notifications:', error);
       setNotifications([]);
@@ -99,7 +120,11 @@ export const useNotifications = () => {
           },
           (payload) => {
             console.log('New notification received:', payload);
-            setNotifications(prev => [payload.new as Notification, ...prev]);
+            const mappedNotification = {
+              ...payload.new,
+              type: mapNotificationType(payload.new.type)
+            } as Notification;
+            setNotifications(prev => [mappedNotification, ...prev]);
             setUnreadCount(prev => prev + 1);
           }
         )

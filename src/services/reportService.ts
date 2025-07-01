@@ -12,6 +12,8 @@ export interface ReportData {
   totalObligations: number;
 }
 
+type ObligationStatus = 'pending' | 'completed' | 'overdue' | 'cancelled';
+
 export const reportService = {
   async generateClientSummaryReport(data: ReportData) {
     console.log('Generating client summary report:', data);
@@ -61,7 +63,13 @@ export const reportService = {
     }
     
     if (data.statuses.length > 0) {
-      query = query.in('status', data.statuses);
+      const validStatuses = data.statuses.filter(status => 
+        ['pending', 'completed', 'overdue', 'cancelled'].includes(status)
+      ) as ObligationStatus[];
+      
+      if (validStatuses.length > 0) {
+        query = query.in('status', validStatuses);
+      }
     }
 
     if (data.dateRange.from) {
