@@ -1,57 +1,61 @@
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { 
   LayoutDashboard, 
   Users, 
   FileText, 
   Calendar, 
   Settings, 
-  HelpCircle,
-  ChevronLeft,
-  ChevronRight,
-  Bell,
-  Shield,
-  BarChart3,
-  Building2
+  Bell, 
+  BarChart3, 
+  LogOut,
+  Upload,
+  Activity
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/hooks/useAuth";
-import { CSABrand } from "./CSABrand";
 
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  userRole: any;
+  className?: string;
 }
 
-export const Sidebar = ({ activeTab, setActiveTab, userRole }: SidebarProps) => {
-  const [collapsed, setCollapsed] = useState(false);
-  const { hasPermission, isDemoMode } = useAuth();
+export const Sidebar = ({ activeTab, setActiveTab, className }: SidebarProps) => {
+  const { signOut, userRole, hasPermission } = useAuth();
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
-  const navigationItems = [
+  const menuItems = [
     {
       id: "dashboard",
       label: "Dashboard",
       icon: LayoutDashboard,
-      permission: "view_dashboard"
+      permission: null
     },
     {
       id: "clients",
-      label: "Client Management",
+      label: "Clients",
       icon: Users,
-      permission: "manage_clients"
+      permission: "view_clients"
     },
     {
-      id: "tax-calendar",
-      label: "Tax Calendar",
-      icon: Calendar,
-      permission: "view_calendar"
+      id: "obligations",
+      label: "Tax Obligations",
+      icon: FileText,
+      permission: "view_obligations"
     },
     {
       id: "documents",
-      label: "Document Manager",
-      icon: FileText,
-      permission: "manage_documents"
+      label: "Documents",
+      icon: Upload,
+      permission: "view_documents"
+    },
+    {
+      id: "calendar",
+      label: "Calendar",
+      icon: Calendar,
+      permission: "view_calendar"
     },
     {
       id: "reports",
@@ -63,176 +67,93 @@ export const Sidebar = ({ activeTab, setActiveTab, userRole }: SidebarProps) => 
       id: "notifications",
       label: "Notifications",
       icon: Bell,
-      permission: "view_notifications",
-      badge: 3
-    }
-  ];
-
-  const adminItems = [
-    {
-      id: "users",
-      label: "User Management",
-      icon: Users,
-      permission: "manage_users"
-    },
-    {
-      id: "companies",
-      label: "Companies",
-      icon: Building2,
-      permission: "manage_companies"
-    },
-    {
-      id: "security",
-      label: "Security Dashboard",
-      icon: Shield,
-      permission: "view_security"
+      permission: null
     },
     {
       id: "system-health",
       label: "System Health",
-      icon: Settings,
-      permission: "view_system"
-    }
-  ];
-
-  const bottomItems = [
+      icon: Activity,
+      permission: "view_reports"
+    },
     {
       id: "settings",
       label: "Settings",
       icon: Settings,
-      permission: "view_settings"
-    },
-    {
-      id: "help",
-      label: "Help & Support",
-      icon: HelpCircle,
-      permission: "view_help"
+      permission: "manage_settings"
     }
   ];
 
-  const hasAdminPermissions = hasPermission('all') || userRole?.role === 'admin';
+  const filteredMenuItems = menuItems.filter(item => 
+    !item.permission || hasPermission(item.permission) || hasPermission('all')
+  );
 
   return (
-    <div className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ${
-      collapsed ? 'w-16' : 'w-64'
-    }`}>
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          {!collapsed && (
-            <div className="flex items-center space-x-2">
-              <CSABrand showFullName={true} />
-              {isDemoMode && (
-                <Badge variant="secondary" className="text-xs">Demo</Badge>
-              )}
+    <div className={cn(
+      "bg-white border-r border-gray-200 h-full flex flex-col",
+      isCollapsed ? "w-16" : "w-64",
+      className
+    )}>
+      <div className="p-4">
+        <div className="flex items-center space-x-2">
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            <span className="text-white font-bold text-sm">TC</span>
+          </div>
+          {!isCollapsed && (
+            <div>
+              <h2 className="font-bold text-gray-900">Tax Compliance</h2>
+              <p className="text-xs text-gray-600">Hub</p>
             </div>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setCollapsed(!collapsed)}
-            className="h-8 w-8"
-          >
-            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </Button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        <nav className="p-4 space-y-2">
-          {/* Main Navigation */}
-          <div className="space-y-1">
-            {!collapsed && (
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                Main
-              </h3>
-            )}
-            {navigationItems.map((item) => {
-              if (!hasPermission(item.permission) && !hasPermission('all')) return null;
-              
-              const Icon = item.icon;
-              return (
-                <Button
-                  key={item.id}
-                  variant={activeTab === item.id ? "default" : "ghost"}
-                  className={`w-full justify-start ${collapsed ? 'px-3' : 'px-3'}`}
-                  onClick={() => setActiveTab(item.id)}
-                >
-                  <Icon className="h-4 w-4" />
-                  {!collapsed && (
-                    <>
-                      <span className="ml-3">{item.label}</span>
-                      {item.badge && (
-                        <Badge className="ml-auto bg-red-500 text-white text-xs">
-                          {item.badge}
-                        </Badge>
-                      )}
-                    </>
-                  )}
-                </Button>
-              );
-            })}
-          </div>
-
-          {/* Admin Section */}
-          {hasAdminPermissions && (
-            <div className="space-y-1 pt-4">
-              {!collapsed && (
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                  Administration
-                </h3>
-              )}
-              {adminItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Button
-                    key={item.id}
-                    variant={activeTab === item.id ? "default" : "ghost"}
-                    className={`w-full justify-start ${collapsed ? 'px-3' : 'px-3'}`}
-                    onClick={() => setActiveTab(item.id)}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {!collapsed && <span className="ml-3">{item.label}</span>}
-                  </Button>
-                );
-              })}
-            </div>
-          )}
-        </nav>
-      </div>
-
-      {/* Bottom Section */}
-      <div className="p-4 border-t border-gray-200 space-y-1">
-        {bottomItems.map((item) => {
-          if (!hasPermission(item.permission) && !hasPermission('all')) return null;
-          
+      <nav className="flex-1 px-4 space-y-1">
+        {filteredMenuItems.map((item) => {
           const Icon = item.icon;
+          const isActive = activeTab === item.id;
+          
           return (
             <Button
               key={item.id}
-              variant={activeTab === item.id ? "default" : "ghost"}
-              className={`w-full justify-start ${collapsed ? 'px-3' : 'px-3'}`}
+              variant={isActive ? "secondary" : "ghost"}
+              className={cn(
+                "w-full justify-start h-10",
+                isActive && "bg-blue-50 text-blue-700 border-blue-200",
+                isCollapsed && "px-2"
+              )}
               onClick={() => setActiveTab(item.id)}
             >
-              <Icon className="h-4 w-4" />
-              {!collapsed && <span className="ml-3">{item.label}</span>}
+              <Icon className={cn("h-4 w-4", !isCollapsed && "mr-3")} />
+              {!isCollapsed && item.label}
+              {!isCollapsed && item.id === "notifications" && (
+                <Badge variant="secondary" className="ml-auto">
+                  3
+                </Badge>
+              )}
             </Button>
           );
         })}
-      </div>
+      </nav>
 
-      {/* User Info */}
-      {!collapsed && (
-        <div className="p-4 border-t border-gray-200 bg-gray-50">
-          <div className="text-sm">
-            <p className="font-medium text-gray-900">
-              {userRole?.name || 'User'}
-            </p>
-            <p className="text-gray-500 capitalize">
-              {userRole?.role || 'readonly'} • {userRole?.department || 'tax'}
-            </p>
+      <div className="p-4 border-t border-gray-200">
+        {!isCollapsed && userRole && (
+          <div className="mb-4">
+            <p className="text-sm font-medium text-gray-900">{userRole.name}</p>
+            <p className="text-xs text-gray-600">{userRole.email}</p>
+            <Badge variant="outline" className="mt-1">
+              {userRole.role}
+            </Badge>
           </div>
-        </div>
-      )}
+        )}
+        <Button
+          variant="ghost"
+          className={cn("w-full justify-start", isCollapsed && "px-2")}
+          onClick={signOut}
+        >
+          <LogOut className={cn("h-4 w-4", !isCollapsed && "mr-3")} />
+          {!isCollapsed && "Sign Out"}
+        </Button>
+      </div>
     </div>
   );
 };
