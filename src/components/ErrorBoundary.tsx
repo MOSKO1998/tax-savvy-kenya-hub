@@ -34,6 +34,17 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('Error caught by boundary:', error, errorInfo);
+    
+    // Special handling for Supabase subscription errors
+    if (error.message?.includes('subscribe multiple times')) {
+      console.warn('Supabase subscription error detected, attempting recovery...');
+      // Give it a moment then try to recover
+      setTimeout(() => {
+        this.resetError();
+      }, 1000);
+      return;
+    }
+    
     this.setState({
       error,
       errorInfo
@@ -50,6 +61,27 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
   render() {
     if (this.state.hasError) {
+      // Check if it's a recoverable Supabase error
+      if (this.state.error?.message?.includes('subscribe multiple times')) {
+        return (
+          <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+            <Card className="max-w-md w-full">
+              <CardHeader className="text-center">
+                <div className="flex justify-center mb-4">
+                  <RefreshCw className="h-12 w-12 text-blue-500 animate-spin" />
+                </div>
+                <CardTitle className="text-blue-600">Reconnecting...</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <p className="text-gray-600">
+                  Establishing real-time connection. Please wait...
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      }
+
       if (this.props.fallback) {
         const FallbackComponent = this.props.fallback;
         return <FallbackComponent error={this.state.error!} resetError={this.resetError} />;

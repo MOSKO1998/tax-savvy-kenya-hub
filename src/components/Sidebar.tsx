@@ -1,5 +1,7 @@
+
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useNotifications } from "@/hooks/useNotifications";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -24,6 +26,7 @@ interface SidebarProps {
 
 export const Sidebar = ({ activeTab, setActiveTab, className }: SidebarProps) => {
   const { signOut, userRole, hasPermission } = useAuth();
+  const { unreadCount } = useNotifications();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const menuItems = [
@@ -125,9 +128,9 @@ export const Sidebar = ({ activeTab, setActiveTab, className }: SidebarProps) =>
             >
               <Icon className={cn("h-4 w-4", !isCollapsed && "mr-3")} />
               {!isCollapsed && item.label}
-              {!isCollapsed && item.id === "notifications" && (
-                <Badge variant="secondary" className="ml-auto">
-                  3
+              {!isCollapsed && item.id === "notifications" && unreadCount > 0 && (
+                <Badge variant="secondary" className="ml-auto bg-red-500 text-white">
+                  {unreadCount}
                 </Badge>
               )}
             </Button>

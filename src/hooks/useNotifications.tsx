@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
@@ -34,10 +34,12 @@ export const useNotifications = () => {
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
   const { user } = useAuth();
+  const channelRef = useRef<any>(null);
 
   const fetchNotifications = async () => {
     if (!user) {
       setNotifications([]);
+      setUnreadCount(0);
       setLoading(false);
       return;
     }
@@ -61,6 +63,7 @@ export const useNotifications = () => {
     } catch (error) {
       console.error('Error fetching notifications:', error);
       setNotifications([]);
+      setUnreadCount(0);
     } finally {
       setLoading(false);
     }
@@ -104,12 +107,19 @@ export const useNotifications = () => {
   };
 
   useEffect(() => {
+    // Clean up existing channel before setting up new one
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
     fetchNotifications();
 
     if (user) {
-      // Set up real-time subscription
+      // Set up real-time subscription with unique channel name
+      const channelName = `notifications_${user.id}_${Date.now()}`;
       const channel = supabase
-        .channel('notifications')
+        .channel(channelName)
         .on(
           'postgres_changes',
           {
@@ -130,11 +140,17 @@ export const useNotifications = () => {
         )
         .subscribe();
 
-      return () => {
-        supabase.removeChannel(channel);
-      };
+      channelRef.current = channel;
     }
-  }, [user]);
+
+    // Cleanup function
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [user?.id]); // Only depend on user.id to prevent unnecessary re-subscriptions
 
   return {
     notifications,
