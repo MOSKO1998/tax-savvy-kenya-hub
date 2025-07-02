@@ -26,6 +26,11 @@ export const useAuth = () => {
   return context;
 };
 
+// Security: Environment-based demo mode toggle
+const isDevelopment = window.location.hostname === 'localhost' || 
+                     window.location.hostname.includes('lovable.app') ||
+                     window.location.hostname.includes('127.0.0.1');
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -34,7 +39,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isDemoMode, setIsDemoMode] = useState(false);
   const { monitorFailedLogins, monitorSuccessfulLogin } = useSecurityMonitor();
 
-  // Demo user data
+  // Demo user data - only available in development
   const createDemoUser = () => {
     const demoUser = {
       id: 'demo-user-id',
@@ -50,6 +55,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return demoUser;
   };
 
+  // Security: Password strength validation
+  const validatePassword = (password: string): string[] => {
+    const errors: string[] = [];
+    if (password.length < 8) errors.push('Password must be at least 8 characters long');
+    if (!/[A-Z]/.test(password)) errors.push('Password must contain at least one uppercase letter');
+    if (!/[a-z]/.test(password)) errors.push('Password must contain at least one lowercase letter');
+    if (!/\d/.test(password)) errors.push('Password must contain at least one number');
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) errors.push('Password must contain at least one special character');
+    return errors;
+  };
+
+  // Security: Rate limiting check
+  const checkRateLimit = async (email: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.rpc('check_rate_limit', {
+        user_identifier: email,
+        max_attempts: 5,
+        window_minutes: 15
+      });
+      
+      if (error) {
+        console.error('Rate limit check failed:', error);
+        return true; // Allow on error to prevent blocking legitimate users
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Rate limit check exception:', error);
+      return true; // Allow on error
+    }
+  };
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -58,9 +95,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Check if it's demo mode
-          if (session.user.email === 'demo@chandariashah.com') {
-            console.log('Demo mode activated');
+          // Security: Check if it's demo mode (only in development)
+          if (isDevelopment && session.user.email === 'demo@chandariashah.com') {
+            console.log('Demo mode activated (development only)');
             setIsDemoMode(true);
             setUserRole(createDemoUser());
           } else {
@@ -132,8 +169,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       console.log('Attempting sign in for:', email);
       
-      // Handle demo login
-      if (email === 'demo@chandariashah.com' && password === 'demo123') {
+      // Security: Check rate limiting
+      const rateLimitOk = await checkRateLimit(email);
+      if (!rateLimitOk) {
+        return { error: { message: 'Too many login attempts. Please try again in 15 minutes.' } };
+      }
+      
+      // Security: Handle demo login (only in development)
+      if (isDevelopment && email === 'demo@chandariashah.com' && password === 'demo123') {
         // Create a properly structured mock user for demo mode
         const mockUser = {
           id: 'demo-user-id',
@@ -169,8 +212,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUserRole(createDemoUser());
         setLoading(false);
         
-        console.log('Demo login successful');
+        console.log('Demo login successful (development only)');
         return { error: null };
+      }
+
+      // Security: Block demo login in production
+      if (!isDevelopment && email === 'demo@chandariashah.com') {
+        return { error: { message: 'Demo access is not available in production environment.' } };
       }
 
       const { error } = await supabase.auth.signInWithPassword({
@@ -196,6 +244,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signUp = async (email: string, password: string, fullName: string, metadata: any = {}) => {
     try {
       console.log('Attempting sign up for:', email, 'with metadata:', metadata);
+      
+      // Security: Validate password strength
+      const passwordErrors = validatePassword(password);
+      if (passwordErrors.length > 0) {
+        return { error: { message: 'Password requirements not met: ' + passwordErrors.join(', ') } };
+      }
+
+      // Security: Validate email format
+      const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+      if (!emailRegex.test(email)) {
+        return { error: { message: 'Please enter a valid email address.' } };
+      }
       
       const redirectUrl = `${window.location.origin}/`;
       
