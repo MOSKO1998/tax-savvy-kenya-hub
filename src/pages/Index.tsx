@@ -58,6 +58,10 @@ const Index = () => {
     }
   };
 
+  const handleNotificationClick = () => {
+    setActiveTab('notifications');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -115,7 +119,10 @@ const Index = () => {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header setSidebarOpen={setSidebarOpen} />
+        <Header 
+          setSidebarOpen={setSidebarOpen} 
+          onNotificationClick={handleNotificationClick}
+        />
         <main className="flex-1 overflow-y-auto">
           <div className="p-6">
             {renderActiveTab()}

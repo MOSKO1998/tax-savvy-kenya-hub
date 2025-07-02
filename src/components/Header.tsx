@@ -3,20 +3,29 @@ import { Bell, Search, Settings, LogOut, User, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
+import { useNotifications } from "@/hooks/useNotifications";
 import { CSABrand } from "./CSABrand";
 
 interface HeaderProps {
   setSidebarOpen: (open: boolean) => void;
+  onNotificationClick?: () => void;
 }
 
-export const Header = ({ setSidebarOpen }: HeaderProps) => {
+export const Header = ({ setSidebarOpen, onNotificationClick }: HeaderProps) => {
   const { user, signOut, isDemoMode, userRole } = useAuth();
+  const { unreadCount } = useNotifications();
 
   const handleSignOut = async () => {
     try {
       await signOut();
     } catch (error) {
       console.error('Error signing out:', error);
+    }
+  };
+
+  const handleNotificationClick = () => {
+    if (onNotificationClick) {
+      onNotificationClick();
     }
   };
 
@@ -50,11 +59,18 @@ export const Header = ({ setSidebarOpen }: HeaderProps) => {
             />
           </div>
           
-          <Button variant="ghost" size="icon" className="relative">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="relative"
+            onClick={handleNotificationClick}
+          >
             <Bell className="h-5 w-5" />
-            <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-500">
-              3
-            </Badge>
+            {unreadCount > 0 && (
+              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-500">
+                {unreadCount}
+              </Badge>
+            )}
           </Button>
           
           <Button variant="ghost" size="icon">

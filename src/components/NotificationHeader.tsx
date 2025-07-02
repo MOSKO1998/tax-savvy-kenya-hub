@@ -5,9 +5,10 @@ import { CheckCircle2, Settings } from "lucide-react";
 
 interface NotificationHeaderProps {
   unreadCount: number;
+  onMarkAllRead: () => void;
 }
 
-export const NotificationHeader = ({ unreadCount }: NotificationHeaderProps) => {
+export const NotificationHeader = ({ unreadCount, onMarkAllRead }: NotificationHeaderProps) => {
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center space-x-3">
@@ -23,10 +24,12 @@ export const NotificationHeader = ({ unreadCount }: NotificationHeaderProps) => 
           <Settings className="h-4 w-4 mr-2" />
           Settings
         </Button>
-        <Button variant="outline">
-          <CheckCircle2 className="h-4 w-4 mr-2" />
-          Mark All Read
-        </Button>
+        {unreadCount > 0 && (
+          <Button variant="outline" onClick={onMarkAllRead}>
+            <CheckCircle2 className="h-4 w-4 mr-2" />
+            Mark All Read
+          </Button>
+        )}
       </div>
     </div>
   );

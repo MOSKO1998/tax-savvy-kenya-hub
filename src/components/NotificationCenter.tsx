@@ -15,6 +15,7 @@ import {
   Settings
 } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
+import { NotificationHeader } from "@/components/NotificationHeader";
 import { format } from "date-fns";
 
 export const NotificationCenter = () => {
@@ -72,24 +73,10 @@ export const NotificationCenter = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold text-gray-900">Notification Center</h2>
-          <p className="text-gray-600 mt-1">Stay updated with real-time notifications</p>
-        </div>
-        <div className="flex space-x-2">
-          {unreadCount > 0 && (
-            <Button variant="outline" onClick={markAllAsRead}>
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Mark All Read
-            </Button>
-          )}
-          <Button variant="outline">
-            <Settings className="h-4 w-4 mr-2" />
-            Settings
-          </Button>
-        </div>
-      </div>
+      <NotificationHeader 
+        unreadCount={unreadCount} 
+        onMarkAllRead={markAllAsRead}
+      />
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
