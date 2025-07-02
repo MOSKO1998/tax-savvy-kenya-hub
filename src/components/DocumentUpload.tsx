@@ -11,17 +11,30 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { sanitizeInput, sanitizeFileName, validateFileType, validateFileSize } from "@/utils/inputValidation";
 
-export const DocumentUpload = ({ clientId, obligationId, onUploadComplete }) => {
+interface FormErrors {
+  title?: string;
+  file?: string;
+}
+
+type DocumentType = 'tax_return' | 'receipt' | 'certificate' | 'correspondence' | 'audit_report' | 'other';
+
+interface DocumentUploadProps {
+  clientId?: string;
+  obligationId?: string;
+  onUploadComplete?: (result?: any) => void;
+}
+
+export const DocumentUpload = ({ clientId, obligationId, onUploadComplete }: DocumentUploadProps) => {
   const [isUploading, setIsUploading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    document_type: 'other'
+    document_type: 'other' as DocumentType
   });
-  const [formErrors, setFormErrors] = useState({});
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
   
-  const fileInputRef = useRef(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { user, hasPermission } = useAuth();
 
@@ -39,8 +52,8 @@ export const DocumentUpload = ({ clientId, obligationId, onUploadComplete }) => 
   
   const maxFileSizeInMB = 10;
 
-  const handleFileSelect = (event) => {
-    const file = event.target.files[0];
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (!file) return;
 
     // Security: Validate file type
@@ -75,7 +88,7 @@ export const DocumentUpload = ({ clientId, obligationId, onUploadComplete }) => 
   };
 
   const validateForm = () => {
-    const errors = {};
+    const errors: FormErrors = {};
 
     if (!formData.title.trim()) {
       errors.title = 'Document title is required';
@@ -102,6 +115,8 @@ export const DocumentUpload = ({ clientId, obligationId, onUploadComplete }) => 
       });
       return;
     }
+
+    if (!selectedFile) return;
 
     setIsUploading(true);
 
@@ -138,7 +153,7 @@ export const DocumentUpload = ({ clientId, obligationId, onUploadComplete }) => 
       // Insert document record
       const { error: dbError } = await supabase
         .from('documents')
-        .insert([sanitizedData]);
+        .insert(sanitizedData);
 
       if (dbError) throw dbError;
 
@@ -182,10 +197,10 @@ export const DocumentUpload = ({ clientId, obligationId, onUploadComplete }) => 
     }
   };
 
-  const handleInputChange = (field, value) => {
+  const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
-    if (formErrors[field]) {
+    if (formErrors[field as keyof FormErrors]) {
       setFormErrors(prev => ({ ...prev, [field]: '' }));
     }
   };

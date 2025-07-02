@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,13 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { sanitizeInput, validateEmail, validatePhoneNumber, validateTaxId } from "@/utils/inputValidation";
+
+interface FormErrors {
+  name?: string;
+  email?: string;
+  phone?: string;
+  tax_id?: string;
+}
 
 export const ClientManagement = () => {
   const [clients, setClients] = useState([]);
@@ -22,7 +28,7 @@ export const ClientManagement = () => {
     address: '',
     client_type: 'individual'
   });
-  const [formErrors, setFormErrors] = useState({});
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
   
   const { toast } = useToast();
   const { user, hasPermission } = useAuth();
@@ -55,7 +61,7 @@ export const ClientManagement = () => {
   };
 
   const validateForm = () => {
-    const errors = {};
+    const errors: FormErrors = {};
 
     // Security: Validate and sanitize all inputs
     if (!formData.name.trim()) {

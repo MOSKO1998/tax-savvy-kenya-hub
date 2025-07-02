@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -211,7 +210,11 @@ export const DocumentManager = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <DocumentUpload onUploadComplete={handleUploadComplete} />
+              <DocumentUpload 
+                clientId={undefined}
+                obligationId={undefined}
+                onUploadComplete={handleUploadComplete} 
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -399,8 +402,9 @@ export const DocumentManager = () => {
             <DialogTitle>Upload Document to Nextcloud</DialogTitle>
           </DialogHeader>
           <DocumentUpload 
+            clientId={undefined}
+            obligationId={undefined}
             onUploadComplete={handleUploadComplete}
-            onCancel={() => setIsUploadDialogOpen(false)}
           />
         </DialogContent>
       </Dialog>
