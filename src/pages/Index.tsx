@@ -16,7 +16,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
 
   const handleNotificationClick = () => {
     setActiveTab("notifications");
@@ -26,10 +26,14 @@ const Index = () => {
     setActiveTab("settings");
   };
 
+  const handleQuickAction = (action: string) => {
+    setActiveTab(action);
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard":
-        return <DashboardOverview />;
+        return <DashboardOverview onQuickAction={handleQuickAction} userRole={userRole} />;
       case "clients":
         return <ClientManagement />;
       case "obligations":
@@ -47,7 +51,7 @@ const Index = () => {
       case "settings":
         return <Settings />;
       default:
-        return <DashboardOverview />;
+        return <DashboardOverview onQuickAction={handleQuickAction} userRole={userRole} />;
     }
   };
 
