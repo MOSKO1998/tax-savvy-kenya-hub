@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,8 @@ import {
   FileText,
   AlertCircle,
   CheckCircle,
-  Clock
+  Clock,
+  Save
 } from "lucide-react";
 import { useTaxObligations } from "@/hooks/useTaxObligations";
 import { useClients } from "@/hooks/useClients";
@@ -33,14 +34,15 @@ export const KenyaTaxObligations = () => {
   const [editingObligation, setEditingObligation] = useState<any>(null);
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedTaxType, setSelectedTaxType] = useState("all");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { obligations, loading, addObligation, updateObligation, deleteObligation } = useTaxObligations();
+  const { obligations, loading, addObligation, updateObligation, deleteObligation, refetch } = useTaxObligations();
   const { clients } = useClients();
   const { toast } = useToast();
 
   const { searchTerm, setSearchTerm, filteredData: searchFilteredObligations } = useSearch(
     obligations, 
-    ['title', 'description', 'tax_type']
+    ['title', 'description', 'tax_type', 'clients.name']
   );
 
   // Apply additional filters
@@ -54,9 +56,9 @@ export const KenyaTaxObligations = () => {
     title: '',
     description: '',
     tax_type: 'paye',
-    due_date: new Date(),
+    due_date: new Date().toISOString().split('T')[0],
     client_id: '',
-    amount: 0,
+    amount: '',
     status: 'pending' as 'pending' | 'completed' | 'overdue',
     reminder_emails: [] as string[]
   });
@@ -77,9 +79,9 @@ export const KenyaTaxObligations = () => {
       title: '',
       description: '',
       tax_type: 'paye',
-      due_date: new Date(),
+      due_date: new Date().toISOString().split('T')[0],
       client_id: '',
-      amount: 0,
+      amount: '',
       status: 'pending',
       reminder_emails: []
     });
@@ -98,28 +100,59 @@ export const KenyaTaxObligations = () => {
       return;
     }
 
-    const selectedClient = clients.find(c => c.id === newObligation.client_id);
-    const obligationData = {
-      ...newObligation,
-      client_name: selectedClient?.name || ''
-    };
-
-    const result = editingObligation 
-      ? await updateObligation(editingObligation.id, obligationData)
-      : await addObligation(obligationData);
-
-    if (result.success) {
-      toast({
-        title: "Success",
-        description: `Tax obligation ${editingObligation ? 'updated' : 'added'} successfully`
-      });
-      resetForm();
-    } else {
+    if (!newObligation.due_date) {
       toast({
         title: "Error",
-        description: `Failed to ${editingObligation ? 'update' : 'add'} tax obligation`,
+        description: "Due date is required",
         variant: "destructive"
       });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const obligationData = {
+        title: newObligation.title.trim(),
+        description: newObligation.description.trim(),
+        tax_type: newObligation.tax_type,
+        due_date: new Date(newObligation.due_date),
+        client_id: newObligation.client_id || null,
+        amount: newObligation.amount ? parseFloat(newObligation.amount) : null,
+        status: newObligation.status,
+        reminder_emails: newObligation.reminder_emails.filter(email => email.trim().length > 0)
+      };
+
+      console.log('Saving obligation data:', obligationData);
+
+      const result = editingObligation 
+        ? await updateObligation(editingObligation.id, obligationData)
+        : await addObligation(obligationData);
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: `Tax obligation ${editingObligation ? 'updated' : 'added'} successfully`
+        });
+        resetForm();
+        refetch();
+      } else {
+        console.error('Failed to save obligation:', result.error);
+        toast({
+          title: "Error",
+          description: `Failed to ${editingObligation ? 'update' : 'add'} tax obligation: ${result.error?.message || 'Unknown error'}`,
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error saving obligation:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -131,6 +164,7 @@ export const KenyaTaxObligations = () => {
           title: "Success",
           description: "Tax obligation deleted successfully"
         });
+        refetch();
       } else {
         toast({
           title: "Error",
@@ -146,9 +180,9 @@ export const KenyaTaxObligations = () => {
       title: obligation.title,
       description: obligation.description || '',
       tax_type: obligation.tax_type,
-      due_date: new Date(obligation.due_date),
+      due_date: new Date(obligation.due_date).toISOString().split('T')[0],
       client_id: obligation.client_id || '',
-      amount: obligation.amount || 0,
+      amount: obligation.amount?.toString() || '',
       status: obligation.status,
       reminder_emails: obligation.reminder_emails || []
     });
@@ -280,7 +314,7 @@ export const KenyaTaxObligations = () => {
             <SearchInput
               value={searchTerm}
               onChange={setSearchTerm}
-              placeholder="Search obligations by title, description, or tax type..."
+              placeholder="Search obligations by title, description, tax type, or client..."
               className="flex-1"
             />
             <Select value={selectedStatus} onValueChange={setSelectedStatus}>
@@ -478,8 +512,8 @@ export const KenyaTaxObligations = () => {
                 <Input
                   id="due_date"
                   type="date"
-                  value={newObligation.due_date.toISOString().split('T')[0]}
-                  onChange={(e) => setNewObligation({ ...newObligation, due_date: new Date(e.target.value) })}
+                  value={newObligation.due_date}
+                  onChange={(e) => setNewObligation({ ...newObligation, due_date: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
@@ -510,7 +544,7 @@ export const KenyaTaxObligations = () => {
                   id="amount"
                   type="number"
                   value={newObligation.amount}
-                  onChange={(e) => setNewObligation({ ...newObligation, amount: parseFloat(e.target.value) || 0 })}
+                  onChange={(e) => setNewObligation({ ...newObligation, amount: e.target.value })}
                   placeholder="0.00"
                 />
               </div>
@@ -580,8 +614,9 @@ export const KenyaTaxObligations = () => {
               <Button variant="outline" onClick={resetForm}>
                 Cancel
               </Button>
-              <Button onClick={handleSaveObligation}>
-                {editingObligation ? 'Update' : 'Add'} Obligation
+              <Button onClick={handleSaveObligation} disabled={isSubmitting}>
+                <Save className="h-4 w-4 mr-2" />
+                {isSubmitting ? 'Saving...' : editingObligation ? 'Update' : 'Add'} Obligation
               </Button>
             </div>
           </div>

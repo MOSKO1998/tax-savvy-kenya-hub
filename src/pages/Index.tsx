@@ -5,6 +5,7 @@ import { Header } from "@/components/Header";
 import { DashboardOverview } from "@/components/DashboardOverview";
 import { ClientManagement } from "@/components/ClientManagement";
 import { TaxCalendar } from "@/components/TaxCalendar";
+import { KenyaTaxObligations } from "@/components/KenyaTaxObligations";
 import { DocumentManager } from "@/components/DocumentManager";
 import { ReportGenerator } from "@/components/ReportGenerator";
 import { NotificationCenter } from "@/components/NotificationCenter";
@@ -37,7 +38,7 @@ const Index = () => {
       case "clients":
         return <ClientManagement />;
       case "obligations":
-        return <TaxCalendar />;
+        return <KenyaTaxObligations />;
       case "documents":
         return <DocumentManager />;
       case "calendar":

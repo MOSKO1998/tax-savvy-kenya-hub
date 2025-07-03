@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +17,8 @@ import {
   Plus,
   Cloud,
   Share,
-  Eye
+  Eye,
+  RefreshCw
 } from "lucide-react";
 import { useClients } from "@/hooks/useClients";
 import { useTaxObligations } from "@/hooks/useTaxObligations";
@@ -24,6 +26,7 @@ import { useSearch } from "@/hooks/useSearch";
 import { SearchInput } from "./SearchInput";
 import { DocumentUpload } from "./DocumentUpload";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export const DocumentManager = () => {
   const [selectedTab, setSelectedTab] = useState("upload");
@@ -31,48 +34,22 @@ export const DocumentManager = () => {
   const [selectedDocType, setSelectedDocType] = useState("all");
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [viewingDocument, setViewingDocument] = useState<any>(null);
+  const [documents, setDocuments] = useState([]);
+  const [loading, setLoading] = useState(false);
   
   const { clients } = useClients();
   const { obligations } = useTaxObligations();
   const { toast } = useToast();
 
-  // Mock documents data - in production this would come from Supabase
-  const [documents] = useState([
-    {
-      id: '1',
-      title: 'PAYE Return - January 2024',
-      type: 'tax_return',
-      client_id: clients[0]?.id,
-      client_name: clients[0]?.name || 'Sample Client',
-      upload_date: '2024-01-15',
-      file_size: '2.5 MB',
-      nextcloud_path: '/documents/paye_return_jan_2024.pdf',
-      share_url: 'https://cloud.audit.ke/s/abc123',
-      status: 'processed'
-    },
-    {
-      id: '2',
-      title: 'VAT Certificate',
-      type: 'certificate',
-      client_id: clients[1]?.id,
-      client_name: clients[1]?.name || 'Another Client',
-      upload_date: '2024-01-10',
-      file_size: '1.2 MB',
-      nextcloud_path: '/documents/vat_certificate.pdf',
-      share_url: 'https://cloud.audit.ke/s/def456',
-      status: 'pending'
-    }
-  ]);
-
   const { searchTerm, setSearchTerm, filteredData: searchFilteredDocs } = useSearch(
     documents, 
-    ['title', 'client_name', 'type']
+    ['title', 'client_name', 'document_type']
   );
 
   // Apply additional filters
   const filteredDocuments = searchFilteredDocs.filter(doc => {
     const clientMatch = selectedClient === "all" || doc.client_id === selectedClient;
-    const typeMatch = selectedDocType === "all" || doc.type === selectedDocType;
+    const typeMatch = selectedDocType === "all" || doc.document_type === selectedDocType;
     return clientMatch && typeMatch;
   });
 
@@ -85,22 +62,80 @@ export const DocumentManager = () => {
     { value: 'other', label: 'Other' }
   ];
 
+  const fetchDocuments = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('documents')
+        .select(`
+          *,
+          clients(name)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching documents:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch documents",
+          variant: "destructive",
+        });
+      } else {
+        setDocuments(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch documents",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
+
   const handleUploadComplete = (result: any) => {
     console.log('Upload completed:', result);
     setIsUploadDialogOpen(false);
+    fetchDocuments(); // Refresh the documents list
     toast({
       title: "Upload Successful",
       description: "Document uploaded to Nextcloud successfully",
     });
   };
 
-  const handleDownload = (document: any) => {
-    // In production, this would download from Nextcloud
-    window.open(document.share_url, '_blank');
+  const handleDownload = async (document: any) => {
+    try {
+      // Call the download function to get the file from Nextcloud
+      const { data, error } = await supabase.functions.invoke('download-from-nextcloud', {
+        body: { filePath: document.file_path }
+      });
+
+      if (error) throw error;
+
+      if (data.success && data.downloadUrl) {
+        window.open(data.downloadUrl, '_blank');
+      } else {
+        throw new Error('Failed to get download URL');
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to download document from Nextcloud",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleShare = (document: any) => {
-    navigator.clipboard.writeText(document.share_url);
+    const shareUrl = `https://cloud.audit.ke/s/${document.id}`;
+    navigator.clipboard.writeText(shareUrl);
     toast({
       title: "Link Copied",
       description: "Share link copied to clipboard",
@@ -140,10 +175,16 @@ export const DocumentManager = () => {
           <h2 className="text-3xl font-bold text-gray-900">Document Manager</h2>
           <p className="text-gray-600 mt-1">Upload, manage, and share documents via Nextcloud</p>
         </div>
-        <Button onClick={() => setIsUploadDialogOpen(true)}>
-          <Upload className="h-4 w-4 mr-2" />
-          Upload Document
-        </Button>
+        <div className="flex space-x-2">
+          <Button variant="outline" onClick={fetchDocuments} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button onClick={() => setIsUploadDialogOpen(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Upload Document
+          </Button>
+        </div>
       </div>
 
       {/* Statistics Cards */}
@@ -164,8 +205,8 @@ export const DocumentManager = () => {
             <div className="flex items-center space-x-2">
               <Cloud className="h-8 w-8 text-green-600" />
               <div>
-                <p className="text-2xl font-bold">{documents.filter(d => d.status === 'processed').length}</p>
-                <p className="text-sm text-gray-600">Processed</p>
+                <p className="text-2xl font-bold">{documents.filter(d => d.file_path).length}</p>
+                <p className="text-sm text-gray-600">In Nextcloud</p>
               </div>
             </div>
           </CardContent>
@@ -175,8 +216,8 @@ export const DocumentManager = () => {
             <div className="flex items-center space-x-2">
               <Upload className="h-8 w-8 text-orange-600" />
               <div>
-                <p className="text-2xl font-bold">{documents.filter(d => d.status === 'pending').length}</p>
-                <p className="text-sm text-gray-600">Pending</p>
+                <p className="text-2xl font-bold">{documents.filter(d => d.created_at).length}</p>
+                <p className="text-sm text-gray-600">Uploaded Today</p>
               </div>
             </div>
           </CardContent>
@@ -186,7 +227,7 @@ export const DocumentManager = () => {
             <div className="flex items-center space-x-2">
               <Share className="h-8 w-8 text-purple-600" />
               <div>
-                <p className="text-2xl font-bold">{documents.filter(d => d.share_url).length}</p>
+                <p className="text-2xl font-bold">{documents.filter(d => d.title).length}</p>
                 <p className="text-sm text-gray-600">Shared</p>
               </div>
             </div>
@@ -261,62 +302,68 @@ export const DocumentManager = () => {
           </Card>
 
           {/* Documents Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredDocuments.map((document) => (
-              <Card key={document.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-3">
-                      {getDocumentIcon(document.type)}
-                      <div>
-                        <CardTitle className="text-lg line-clamp-2">{document.title}</CardTitle>
-                        <p className="text-sm text-gray-600">{document.client_name}</p>
+          {loading ? (
+            <div className="flex items-center justify-center p-8">
+              <RefreshCw className="h-8 w-8 animate-spin" />
+              <span className="ml-2">Loading documents...</span>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredDocuments.map((document) => (
+                <Card key={document.id} className="hover:shadow-lg transition-shadow">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center space-x-3">
+                        {getDocumentIcon(document.document_type)}
+                        <div>
+                          <CardTitle className="text-lg line-clamp-2">{document.title}</CardTitle>
+                          <p className="text-sm text-gray-600">{document.clients?.name || 'No client'}</p>
+                        </div>
                       </div>
                     </div>
-                    <Badge className={getStatusColor(document.status)}>
-                      {document.status}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="text-sm text-gray-600 space-y-1">
-                    <p><span className="font-medium">Type:</span> {documentTypes.find(t => t.value === document.type)?.label}</p>
-                    <p><span className="font-medium">Size:</span> {document.file_size}</p>
-                    <p><span className="font-medium">Uploaded:</span> {new Date(document.upload_date).toLocaleDateString()}</p>
-                    <p><span className="font-medium">Path:</span> <code className="text-xs bg-gray-100 px-1 rounded">{document.nextcloud_path}</code></p>
-                  </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <p><span className="font-medium">Type:</span> {documentTypes.find(t => t.value === document.document_type)?.label || document.document_type}</p>
+                      <p><span className="font-medium">Size:</span> {document.file_size ? `${(document.file_size / 1024 / 1024).toFixed(2)} MB` : 'Unknown'}</p>
+                      <p><span className="font-medium">Uploaded:</span> {new Date(document.created_at).toLocaleDateString()}</p>
+                      {document.file_path && (
+                        <p><span className="font-medium">Path:</span> <code className="text-xs bg-gray-100 px-1 rounded">{document.file_path}</code></p>
+                      )}
+                    </div>
 
-                  <div className="flex space-x-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => setViewingDocument(document)}
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      View
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDownload(document)}
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleShare(document)}
-                    >
-                      <Share className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    <div className="flex space-x-2 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => setViewingDocument(document)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDownload(document)}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleShare(document)}
+                      >
+                        <Share className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
 
-          {filteredDocuments.length === 0 && (
+          {filteredDocuments.length === 0 && !loading && (
             <Card>
               <CardContent className="text-center py-12">
                 <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -362,7 +409,8 @@ export const DocumentManager = () => {
                   <h4 className="font-medium">Server Details</h4>
                   <div className="text-sm text-gray-600 space-y-1">
                     <p><span className="font-medium">URL:</span> https://cloud.audit.ke</p>
-                    <p><span className="font-medium">Storage:</span> 500GB Available</p>
+                    <p><span className="font-medium">WebDAV:</span> /remote.php/dav/files/csa.kuria</p>
+                    <p><span className="font-medium">Storage:</span> Available</p>
                     <p><span className="font-medium">Sync Status:</span> Active</p>
                   </div>
                 </div>
@@ -384,9 +432,9 @@ export const DocumentManager = () => {
                     <ExternalLink className="h-4 w-4 mr-2" />
                     Open Nextcloud
                   </Button>
-                  <Button variant="outline">
+                  <Button variant="outline" onClick={() => window.open('https://cloud.audit.ke/remote.php/dav/files/csa.kuria', '_blank')}>
                     <Folder className="h-4 w-4 mr-2" />
-                    Browse Files
+                    Browse WebDAV
                   </Button>
                 </div>
               </div>
@@ -414,23 +462,20 @@ export const DocumentManager = () => {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
-              {viewingDocument && getDocumentIcon(viewingDocument.type)}
+              {viewingDocument && getDocumentIcon(viewingDocument.document_type)}
               <span>{viewingDocument?.title}</span>
             </DialogTitle>
           </DialogHeader>
           {viewingDocument && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><span className="font-medium">Client:</span> {viewingDocument.client_name}</div>
-                <div><span className="font-medium">Type:</span> {documentTypes.find(t => t.value === viewingDocument.type)?.label}</div>
-                <div><span className="font-medium">Size:</span> {viewingDocument.file_size}</div>
-                <div><span className="font-medium">Status:</span> 
-                  <Badge className={`ml-2 ${getStatusColor(viewingDocument.status)}`}>
-                    {viewingDocument.status}
-                  </Badge>
-                </div>
-                <div className="col-span-2"><span className="font-medium">Uploaded:</span> {new Date(viewingDocument.upload_date).toLocaleString()}</div>
-                <div className="col-span-2"><span className="font-medium">Nextcloud Path:</span> <code className="text-xs bg-gray-100 px-1 rounded">{viewingDocument.nextcloud_path}</code></div>
+                <div><span className="font-medium">Client:</span> {viewingDocument.clients?.name || 'No client'}</div>
+                <div><span className="font-medium">Type:</span> {documentTypes.find(t => t.value === viewingDocument.document_type)?.label || viewingDocument.document_type}</div>
+                <div><span className="font-medium">Size:</span> {viewingDocument.file_size ? `${(viewingDocument.file_size / 1024 / 1024).toFixed(2)} MB` : 'Unknown'}</div>
+                <div className="col-span-2"><span className="font-medium">Uploaded:</span> {new Date(viewingDocument.created_at).toLocaleString()}</div>
+                {viewingDocument.file_path && (
+                  <div className="col-span-2"><span className="font-medium">Nextcloud Path:</span> <code className="text-xs bg-gray-100 px-1 rounded">{viewingDocument.file_path}</code></div>
+                )}
               </div>
               
               <div className="flex space-x-2 pt-4 border-t">
@@ -442,7 +487,7 @@ export const DocumentManager = () => {
                   <Share className="h-4 w-4 mr-2" />
                   Copy Share Link
                 </Button>
-                <Button variant="outline" onClick={() => window.open(viewingDocument.share_url, '_blank')}>
+                <Button variant="outline" onClick={() => window.open('https://cloud.audit.ke', '_blank')}>
                   <ExternalLink className="h-4 w-4 mr-2" />
                   Open in Nextcloud
                 </Button>
