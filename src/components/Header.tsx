@@ -9,9 +9,10 @@ import { CSABrand } from "./CSABrand";
 interface HeaderProps {
   setSidebarOpen: (open: boolean) => void;
   onNotificationClick?: () => void;
+  onSettingsClick?: () => void;
 }
 
-export const Header = ({ setSidebarOpen, onNotificationClick }: HeaderProps) => {
+export const Header = ({ setSidebarOpen, onNotificationClick, onSettingsClick }: HeaderProps) => {
   const { user, signOut, isDemoMode, userRole } = useAuth();
   const { unreadCount } = useNotifications();
 
@@ -26,6 +27,12 @@ export const Header = ({ setSidebarOpen, onNotificationClick }: HeaderProps) => 
   const handleNotificationClick = () => {
     if (onNotificationClick) {
       onNotificationClick();
+    }
+  };
+
+  const handleSettingsClick = () => {
+    if (onSettingsClick) {
+      onSettingsClick();
     }
   };
 
@@ -73,7 +80,11 @@ export const Header = ({ setSidebarOpen, onNotificationClick }: HeaderProps) => 
             )}
           </Button>
           
-          <Button variant="ghost" size="icon">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={handleSettingsClick}
+          >
             <Settings className="h-5 w-5" />
           </Button>
           

@@ -25,6 +25,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useTaxObligations } from "@/hooks/useTaxObligations";
+import { useClients } from "@/hooks/useClients";
 import { useToast } from "@/hooks/use-toast";
 
 interface TaxObligation {
@@ -33,6 +34,7 @@ interface TaxObligation {
   description?: string;
   due_date: Date;
   tax_type: string;
+  client_id?: string;
   client_name?: string;
   amount?: number;
   status: 'pending' | 'completed' | 'overdue';
@@ -49,6 +51,7 @@ export const TaxCalendar = () => {
     description: '',
     due_date: new Date(),
     tax_type: 'paye',
+    client_id: '',
     client_name: '',
     amount: 0,
     status: 'pending',
@@ -58,6 +61,7 @@ export const TaxCalendar = () => {
   
   const { isDemoMode } = useAuth();
   const { obligations, loading, addObligation, updateObligation, deleteObligation } = useTaxObligations();
+  const { clients } = useClients();
   const { toast } = useToast();
 
   const monthNames = [
@@ -68,11 +72,10 @@ export const TaxCalendar = () => {
   const taxTypes = [
     { value: 'paye', label: 'PAYE' },
     { value: 'vat', label: 'VAT' },
-    { value: 'corporation_tax', label: 'Corporation Tax' },
+    { value: 'corporate_tax', label: 'Corporation Tax' },
     { value: 'withholding_tax', label: 'Withholding Tax' },
-    { value: 'nssf', label: 'NSSF' },
-    { value: 'nhif', label: 'NHIF' },
-    { value: 'annual_return', label: 'Annual Return' }
+    { value: 'customs_duty', label: 'Customs Duty' },
+    { value: 'excise_tax', label: 'Excise Tax' }
   ];
 
   const getDaysInMonth = (date: Date) => {
@@ -114,6 +117,7 @@ export const TaxCalendar = () => {
 
     const obligationData = {
       ...newObligation,
+      client_id: newObligation.client_id || null,
       reminder_emails: newObligation.reminder_emails?.filter(email => email.length > 0)
     };
 
@@ -173,6 +177,7 @@ export const TaxCalendar = () => {
       description: '',
       due_date: new Date(),
       tax_type: 'paye',
+      client_id: '',
       client_name: '',
       amount: 0,
       status: 'pending',
@@ -206,6 +211,7 @@ export const TaxCalendar = () => {
       description: obligation.description || '',
       due_date: new Date(obligation.due_date),
       tax_type: obligation.tax_type,
+      client_id: obligation.client_id || '',
       client_name: obligation.clients?.name || obligation.client_name || '',
       amount: obligation.amount || 0,
       status: obligation.status,
@@ -213,6 +219,15 @@ export const TaxCalendar = () => {
     });
     setEditingObligation(obligation);
     setShowAddForm(true);
+  };
+
+  const handleClientChange = (clientId: string) => {
+    const selectedClient = clients.find(c => c.id === clientId);
+    setNewObligation(prev => ({
+      ...prev,
+      client_id: clientId,
+      client_name: selectedClient?.name || ''
+    }));
   };
 
   const renderCalendarDays = () => {
@@ -354,13 +369,20 @@ export const TaxCalendar = () => {
                 </Popover>
               </div>
               <div>
-                <Label htmlFor="client_name">Client Name</Label>
-                <Input
-                  id="client_name"
-                  value={newObligation.client_name}
-                  onChange={(e) => setNewObligation(prev => ({ ...prev, client_name: e.target.value }))}
-                  placeholder="Client or company name"
-                />
+                <Label htmlFor="client">Client</Label>
+                <Select value={newObligation.client_id} onValueChange={handleClientChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a client" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No Client</SelectItem>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

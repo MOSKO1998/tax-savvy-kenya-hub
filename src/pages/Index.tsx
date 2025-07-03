@@ -1,90 +1,39 @@
 
-import { useState, useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { Header } from "@/components/Header";
+import { useState } from "react";
 import { Sidebar } from "@/components/Sidebar";
+import { Header } from "@/components/Header";
 import { DashboardOverview } from "@/components/DashboardOverview";
 import { ClientManagement } from "@/components/ClientManagement";
-import { KenyaTaxObligations } from "@/components/KenyaTaxObligations";
-import { DocumentManager } from "@/components/DocumentManager";
 import { TaxCalendar } from "@/components/TaxCalendar";
+import { DocumentManager } from "@/components/DocumentManager";
 import { ReportGenerator } from "@/components/ReportGenerator";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { SystemHealth } from "@/components/SystemHealth";
 import { Settings } from "@/components/Settings";
-import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const Index = () => {
-  const { user, loading, userRole } = useAuth();
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate("/auth");
-    }
-  }, [user, loading, navigate]);
-
-  const handleQuickAction = (action: string) => {
-    switch (action) {
-      case 'clients':
-        setActiveTab('clients');
-        break;
-      case 'obligations':
-        setActiveTab('obligations');
-        break;
-      case 'documents':
-        setActiveTab('documents');
-        break;
-      case 'tax-calendar':
-      case 'calendar':
-        setActiveTab('calendar');
-        break;
-      case 'reports':
-        setActiveTab('reports');
-        break;
-      case 'notifications':
-        setActiveTab('notifications');
-        break;
-      case 'settings':
-        setActiveTab('settings');
-        break;
-      case 'system-health':
-        setActiveTab('system-health');
-        break;
-      default:
-        setActiveTab('dashboard');
-    }
-  };
+  const { user } = useAuth();
 
   const handleNotificationClick = () => {
-    setActiveTab('notifications');
+    setActiveTab("notifications");
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  const handleSettingsClick = () => {
+    setActiveTab("settings");
+  };
 
-  if (!user) {
-    return null;
-  }
-
-  const renderActiveTab = () => {
+  const renderContent = () => {
     switch (activeTab) {
       case "dashboard":
-        return <DashboardOverview onQuickAction={handleQuickAction} userRole={userRole} />;
+        return <DashboardOverview />;
       case "clients":
         return <ClientManagement />;
       case "obligations":
-        return <KenyaTaxObligations />;
+        return <TaxCalendar />;
       case "documents":
         return <DocumentManager />;
       case "calendar":
@@ -98,38 +47,46 @@ const Index = () => {
       case "settings":
         return <Settings />;
       default:
-        return <DashboardOverview onQuickAction={handleQuickAction} userRole={userRole} />;
+        return <DashboardOverview />;
     }
   };
 
+  if (!user) {
+    return <div>Loading...</div>;
+  }
+
   return (
-    <div className="h-screen bg-gray-50 flex overflow-hidden">
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:block`}>
-        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gray-50 flex">
+        <div className={`${sidebarOpen ? 'block' : 'hidden'} lg:block`}>
+          <Sidebar
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            className="fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto"
+          />
+        </div>
+        
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+        
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Header 
+            setSidebarOpen={setSidebarOpen} 
+            onNotificationClick={handleNotificationClick}
+            onSettingsClick={handleSettingsClick}
+          />
+          <main className="flex-1 overflow-y-auto p-6">
+            <ErrorBoundary>
+              {renderContent()}
+            </ErrorBoundary>
+          </main>
+        </div>
       </div>
-
-      {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header 
-          setSidebarOpen={setSidebarOpen} 
-          onNotificationClick={handleNotificationClick}
-        />
-        <main className="flex-1 overflow-y-auto">
-          <div className="p-6">
-            {renderActiveTab()}
-          </div>
-        </main>
-      </div>
-    </div>
+    </ErrorBoundary>
   );
 };
 
