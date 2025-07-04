@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { AlertTriangle, Database, Download, Upload, Sync, CheckCircle, XCircle } from 'lucide-react';
+import { AlertTriangle, Database, Download, Upload, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { dataExportService } from '@/services/dataExportService';
 import { hybridDataService } from '@/services/hybridDataService';
@@ -273,7 +272,7 @@ export const DatabaseMigration = () => {
               variant="outline"
               className="flex items-center gap-2"
             >
-              <Sync className="h-4 w-4" />
+              <RefreshCw className="h-4 w-4" />
               {isSyncing ? 'Syncing...' : 'Bi-Directional Sync'}
             </Button>
 
