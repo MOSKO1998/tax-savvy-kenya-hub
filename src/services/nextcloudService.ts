@@ -13,7 +13,7 @@ class NextcloudService {
     this.config = {
       url: process.env.NEXTCLOUD_URL || 'https://cloud.audit.ke',
       username: process.env.NEXTCLOUD_USERNAME || 'it@csa.co.ke',
-      password: process.env.NEXTCLOUD_PASSWORD || '',
+      password: process.env.NEXTCLOUD_PASSWORD || 'Wakatiimefika@1998',
       basePath: '/remote.php/dav/files'
     };
   }

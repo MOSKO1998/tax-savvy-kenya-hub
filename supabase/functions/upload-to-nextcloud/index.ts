@@ -22,8 +22,8 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     // Get Nextcloud configuration from environment variables
     const nextcloudUrl = Deno.env.get("NEXTCLOUD_URL") || "https://cloud.audit.ke";
-    const nextcloudUsername = Deno.env.get("NEXTCLOUD_USERNAME");
-    const nextcloudPassword = Deno.env.get("NEXTCLOUD_PASSWORD");
+    const nextcloudUsername = Deno.env.get("NEXTCLOUD_USERNAME") || "it@csa.co.ke";
+    const nextcloudPassword = Deno.env.get("NEXTCLOUD_PASSWORD") || "Wakatiimefika@1998";
 
     if (!nextcloudUsername || !nextcloudPassword) {
       throw new Error("Nextcloud credentials not configured");

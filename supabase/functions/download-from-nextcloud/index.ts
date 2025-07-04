@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
@@ -7,8 +6,8 @@ const corsHeaders = {
 }
 
 const NEXTCLOUD_URL = "https://cloud.audit.ke"
-const NEXTCLOUD_USERNAME = "csa.kuria"
-const NEXTCLOUD_PASSWORD = Deno.env.get('NEXTCLOUD_PASSWORD') || ''
+const NEXTCLOUD_USERNAME = "it@csa.co.ke"
+const NEXTCLOUD_PASSWORD = Deno.env.get('NEXTCLOUD_PASSWORD') || 'Wakatiimefika@1998'
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
