@@ -13,11 +13,21 @@ import { SystemHealth } from "@/components/SystemHealth";
 import { Settings } from "@/components/Settings";
 import { useAuth } from "@/hooks/useAuth";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { LoadingScreen } from "@/components/LoadingScreen";
+import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, userRole } = useAuth();
+  const { user, userRole, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate("/auth");
+    }
+  }, [user, loading, navigate]);
 
   const handleNotificationClick = () => {
     setActiveTab("notifications");
@@ -56,8 +66,12 @@ const Index = () => {
     }
   };
 
+  if (loading) {
+    return <LoadingScreen message="Initializing Tax Compliance Hub..." />;
+  }
+
   if (!user) {
-    return <div>Loading...</div>;
+    return <LoadingScreen message="Redirecting to login..." />;
   }
 
   return (
