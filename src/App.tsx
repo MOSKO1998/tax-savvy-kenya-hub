@@ -8,6 +8,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import { NotFound } from "./pages/NotFound";
+import { useEffect } from "react";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -19,6 +20,12 @@ const queryClient = new QueryClient({
 });
 
 function App() {
+  useEffect(() => {
+    console.log('App component mounted');
+  }, []);
+
+  console.log('App component rendering');
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>

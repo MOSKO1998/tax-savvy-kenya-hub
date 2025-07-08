@@ -14,6 +14,7 @@ import { Settings } from "@/components/Settings";
 import { useAuth } from "@/hooks/useAuth";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { TestComponent } from "@/components/TestComponent";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 
@@ -23,8 +24,12 @@ const Index = () => {
   const { user, userRole, loading } = useAuth();
   const navigate = useNavigate();
 
+  console.log('Index component rendering, loading:', loading, 'user:', user);
+
   useEffect(() => {
+    console.log('Index useEffect - loading:', loading, 'user:', user);
     if (!loading && !user) {
+      console.log('Redirecting to auth...');
       navigate("/auth");
     }
   }, [user, loading, navigate]);
@@ -67,12 +72,16 @@ const Index = () => {
   };
 
   if (loading) {
+    console.log('Showing loading screen');
     return <LoadingScreen message="Initializing Tax Compliance Hub..." />;
   }
 
   if (!user) {
+    console.log('No user, showing loading screen before redirect');
     return <LoadingScreen message="Redirecting to login..." />;
   }
+
+  console.log('Rendering main app interface');
 
   return (
     <ErrorBoundary>
