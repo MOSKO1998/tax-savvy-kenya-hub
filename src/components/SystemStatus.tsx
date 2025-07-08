@@ -3,152 +3,195 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, AlertTriangle, RefreshCw, Database, Cloud, HardDrive } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { CheckCircle, XCircle, AlertCircle, RefreshCw, Database, Cloud, Server } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { localDB } from '@/lib/localDatabase';
-import { nextcloudService } from '@/services/nextcloudService';
 
-interface SystemStatus {
-  database: 'connected' | 'disconnected' | 'checking';
-  supabase: 'connected' | 'disconnected' | 'checking';
-  nextcloud: 'connected' | 'disconnected' | 'checking';
-  localStorage: 'available' | 'unavailable';
+interface SystemCheck {
+  name: string;
+  status: 'success' | 'error' | 'warning';
+  message: string;
+  icon: React.ComponentType<any>;
 }
 
 export const SystemStatus = () => {
-  const [status, setStatus] = useState<SystemStatus>({
-    database: 'checking',
-    supabase: 'checking',
-    nextcloud: 'checking',
-    localStorage: 'available'
-  });
-  const [isChecking, setIsChecking] = useState(false);
-  const [lastCheck, setLastCheck] = useState<Date | null>(null);
+  const [checks, setChecks] = useState<SystemCheck[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const checkSystemStatus = async () => {
-    setIsChecking(true);
+  const runSystemChecks = async () => {
+    setIsLoading(true);
+    const newChecks: SystemCheck[] = [];
+
+    // Database Connection Check
+    try {
+      const { data, error } = await supabase.from('profiles').select('count').limit(1);
+      if (error) throw error;
+      newChecks.push({
+        name: 'Database Connection',
+        status: 'success',
+        message: 'Connected to Supabase successfully',
+        icon: Database
+      });
+    } catch (error) {
+      newChecks.push({
+        name: 'Database Connection',
+        status: 'error',
+        message: 'Failed to connect to database',
+        icon: Database
+      });
+    }
+
+    // Nextcloud Connection Check
+    try {
+      const nextcloudUrl = import.meta.env.VITE_NEXTCLOUD_URL || 'https://cloud.audit.ke';
+      const response = await fetch(`${nextcloudUrl}/status.php`, { 
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      });
+      
+      if (response.ok) {
+        newChecks.push({
+          name: 'Nextcloud Connection',
+          status: 'success',
+          message: 'Nextcloud server is accessible',
+          icon: Cloud
+        });
+      } else {
+        throw new Error('Server not accessible');
+      }
+    } catch (error) {
+      newChecks.push({
+        name: 'Nextcloud Connection',
+        status: 'warning',
+        message: 'Nextcloud server check failed - may work in production',
+        icon: Cloud
+      });
+    }
+
+    // Environment Variables Check
+    const requiredEnvVars = [
+      'VITE_SUPABASE_URL',
+      'VITE_SUPABASE_ANON_KEY'
+    ];
+
+    const missingVars = requiredEnvVars.filter(varName => !import.meta.env[varName]);
     
-    // Check local database
-    try {
-      const dbConnected = await localDB.connect();
-      setStatus(prev => ({ ...prev, database: dbConnected ? 'connected' : 'disconnected' }));
-    } catch (error) {
-      setStatus(prev => ({ ...prev, database: 'disconnected' }));
+    if (missingVars.length === 0) {
+      newChecks.push({
+        name: 'Environment Configuration',
+        status: 'success',
+        message: 'All required environment variables are set',
+        icon: Server
+      });
+    } else {
+      newChecks.push({
+        name: 'Environment Configuration',
+        status: 'error',
+        message: `Missing variables: ${missingVars.join(', ')}`,
+        icon: Server
+      });
     }
 
-    // Check Supabase
-    try {
-      const { data, error } = await supabase.from('clients').select('id').limit(1);
-      setStatus(prev => ({ ...prev, supabase: error ? 'disconnected' : 'connected' }));
-    } catch (error) {
-      setStatus(prev => ({ ...prev, supabase: 'disconnected' }));
-    }
-
-    // Check Nextcloud
-    try {
-      const result = await nextcloudService.testConnection();
-      setStatus(prev => ({ ...prev, nextcloud: result.success ? 'connected' : 'disconnected' }));
-    } catch (error) {
-      setStatus(prev => ({ ...prev, nextcloud: 'disconnected' }));
-    }
-
-    // Check localStorage
-    try {
-      localStorage.setItem('test', 'test');
-      localStorage.removeItem('test');
-      setStatus(prev => ({ ...prev, localStorage: 'available' }));
-    } catch (error) {
-      setStatus(prev => ({ ...prev, localStorage: 'unavailable' }));
-    }
-
-    setLastCheck(new Date());
-    setIsChecking(false);
+    setChecks(newChecks);
+    setIsLoading(false);
   };
 
   useEffect(() => {
-    checkSystemStatus();
-    
-    // Auto-check every 5 minutes
-    const interval = setInterval(checkSystemStatus, 5 * 60 * 1000);
-    return () => clearInterval(interval);
+    runSystemChecks();
   }, []);
 
-  const getStatusBadge = (status: string) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'connected':
-      case 'available':
-        return <Badge variant="default" className="bg-green-500"><CheckCircle className="h-3 w-3 mr-1" />Connected</Badge>;
-      case 'disconnected':
-      case 'unavailable':
-        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Disconnected</Badge>;
-      case 'checking':
-        return <Badge variant="secondary"><RefreshCw className="h-3 w-3 mr-1 animate-spin" />Checking...</Badge>;
+      case 'success':
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
+      case 'error':
+        return <XCircle className="h-5 w-5 text-red-500" />;
+      case 'warning':
+        return <AlertCircle className="h-5 w-5 text-yellow-500" />;
       default:
-        return <Badge variant="secondary"><AlertTriangle className="h-3 w-3 mr-1" />Unknown</Badge>;
+        return <AlertCircle className="h-5 w-5 text-gray-500" />;
     }
   };
 
+  const getStatusBadge = (status: string) => {
+    const variants = {
+      success: 'default',
+      error: 'destructive',
+      warning: 'secondary'
+    } as const;
+    
+    return (
+      <Badge variant={variants[status as keyof typeof variants] || 'secondary'}>
+        {status.toUpperCase()}
+      </Badge>
+    );
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Database className="h-5 w-5" />
-          System Status
-        </CardTitle>
-        <CardDescription>
-          Current status of all system components
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex items-center justify-between p-3 border rounded-lg">
-            <div className="flex items-center gap-2">
-              <Database className="h-4 w-4" />
-              <span className="font-medium">Local Database</span>
-            </div>
-            {getStatusBadge(status.database)}
-          </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">System Status</h2>
+        <Button 
+          onClick={runSystemChecks} 
+          disabled={isLoading}
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
+      </div>
 
-          <div className="flex items-center justify-between p-3 border rounded-lg">
-            <div className="flex items-center gap-2">
-              <Cloud className="h-4 w-4" />
-              <span className="font-medium">Supabase Cloud</span>
-            </div>
-            {getStatusBadge(status.supabase)}
-          </div>
+      <div className="grid gap-4">
+        {checks.map((check, index) => {
+          const IconComponent = check.icon;
+          return (
+            <Card key={index}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                  <IconComponent className="h-4 w-4" />
+                  {check.name}
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  {getStatusBadge(check.status)}
+                  {getStatusIcon(check.status)}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <CardDescription>{check.message}</CardDescription>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
 
-          <div className="flex items-center justify-between p-3 border rounded-lg">
-            <div className="flex items-center gap-2">
-              <Cloud className="h-4 w-4" />
-              <span className="font-medium">Nextcloud Storage</span>
-            </div>
-            {getStatusBadge(status.nextcloud)}
-          </div>
+      {checks.some(check => check.status === 'error') && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Some system components are not working properly. Please check your configuration and network connectivity.
+          </AlertDescription>
+        </Alert>
+      )}
 
-          <div className="flex items-center justify-between p-3 border rounded-lg">
-            <div className="flex items-center gap-2">
-              <HardDrive className="h-4 w-4" />
-              <span className="font-medium">Local Storage</span>
-            </div>
-            {getStatusBadge(status.localStorage)}
+      <Card>
+        <CardHeader>
+          <CardTitle>System Information</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex justify-between">
+            <span className="text-sm text-muted-foreground">Application Version:</span>
+            <span className="text-sm">1.0.0</span>
           </div>
-        </div>
-
-        <div className="flex items-center justify-between pt-4 border-t">
-          <div className="text-sm text-muted-foreground">
-            {lastCheck ? `Last checked: ${lastCheck.toLocaleTimeString()}` : 'Never checked'}
+          <div className="flex justify-between">
+            <span className="text-sm text-muted-foreground">Environment:</span>
+            <span className="text-sm">{import.meta.env.MODE}</span>
           </div>
-          <Button 
-            onClick={checkSystemStatus} 
-            disabled={isChecking}
-            variant="outline"
-            size="sm"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isChecking ? 'animate-spin' : ''}`} />
-            Refresh Status
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+          <div className="flex justify-between">
+            <span className="text-sm text-muted-foreground">Build Time:</span>
+            <span className="text-sm">{new Date().toLocaleDateString()}</span>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
