@@ -1,125 +1,58 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings as SettingsIcon, Database, Cloud, Users, Shield } from 'lucide-react';
-import { DatabaseMigration } from '@/components/DatabaseMigration';
-import { useAuth } from '@/hooks/useAuth';
+import { DatabaseMigration } from './DatabaseMigration';
+import { SystemStatus } from './SystemStatus';
+import { QuickSetup } from './QuickSetup';
+import { Settings as SettingsIcon, Database, Monitor, Wrench } from 'lucide-react';
 
 export const Settings = () => {
-  const { userRole } = useAuth();
-  const [activeTab, setActiveTab] = useState('database');
-
-  // Check if user has admin permissions
-  const isAdmin = userRole?.role === 'admin' || userRole?.permissions?.includes('all');
-
-  if (!isAdmin) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Access Restricted</h3>
-          <p className="text-gray-600">You don't have permission to access system settings.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <SettingsIcon className="h-8 w-8 text-blue-600" />
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">System Settings</h1>
-          <p className="text-gray-600">Configure system preferences, database, and integrations</p>
-        </div>
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center gap-2 mb-6">
+        <SettingsIcon className="h-6 w-6" />
+        <h1 className="text-2xl font-bold">System Settings</h1>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs defaultValue="status" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="database" className="flex items-center gap-2">
+          <TabsTrigger value="status" className="flex items-center gap-2">
+            <Monitor className="h-4 w-4" />
+            Status
+          </TabsTrigger>
+          <TabsTrigger value="setup" className="flex items-center gap-2">
+            <Wrench className="h-4 w-4" />
+            Setup
+          </TabsTrigger>
+          <TabsTrigger value="migration" className="flex items-center gap-2">
             <Database className="h-4 w-4" />
-            Database
+            Migration
           </TabsTrigger>
-          <TabsTrigger value="cloud" className="flex items-center gap-2">
-            <Cloud className="h-4 w-4" />
-            Cloud Integration
-          </TabsTrigger>
-          <TabsTrigger value="users" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            User Management
-          </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center gap-2">
-            <Shield className="h-4 w-4" />
-            Security
+          <TabsTrigger value="advanced" className="flex items-center gap-2">
+            <SettingsIcon className="h-4 w-4" />
+            Advanced
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="database" className="space-y-6">
+        <TabsContent value="status" className="space-y-4">
+          <SystemStatus />
+        </TabsContent>
+
+        <TabsContent value="setup" className="space-y-4">
+          <QuickSetup />
+        </TabsContent>
+
+        <TabsContent value="migration" className="space-y-4">
           <DatabaseMigration />
         </TabsContent>
 
-        <TabsContent value="cloud" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Cloud className="h-5 w-5" />
-                Cloud Integration Settings
-              </CardTitle>
-              <CardDescription>
-                Configure Nextcloud and other cloud service integrations
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-gray-500">
-                <Cloud className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p>Cloud integration settings will be available here</p>
-                <p className="text-sm">Configure Nextcloud, backup services, and sync options</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="users" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                User Management
-              </CardTitle>
-              <CardDescription>
-                Manage user accounts, roles, and permissions
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-gray-500">
-                <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p>User management interface will be available here</p>
-                <p className="text-sm">Add, edit, and manage user roles and permissions</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="security" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Security Settings
-              </CardTitle>
-              <CardDescription>
-                Configure security policies, encryption, and access controls
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-gray-500">
-                <Shield className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p>Security settings will be available here</p>
-                <p className="text-sm">Configure encryption, access policies, and audit settings</p>
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="advanced" className="space-y-4">
+          <div className="grid gap-4">
+            {/* Advanced settings can be added here */}
+            <div className="text-center p-8 text-muted-foreground">
+              Advanced settings coming soon...
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

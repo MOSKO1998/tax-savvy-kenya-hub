@@ -30,11 +30,11 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@audit.ke
       PGADMIN_DEFAULT_PASSWORD: admin123
-      PGLADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
       - "8080:80"
     volumes:
-      - pgadmin_data:/var/lib/pgladmin
+      - pgadmin_data:/var/lib/pgadmin
     networks:
       - tax_compliance_network
     restart: unless-stopped
@@ -52,6 +52,8 @@ services:
       NEXTCLOUD_URL: https://cloud.audit.ke
       NEXTCLOUD_USERNAME: it@csa.co.ke
       NEXTCLOUD_PASSWORD: Wakatiimefika@1998
+      VITE_SUPABASE_URL: https://hqjmoxufpgaulcwujruv.supabase.co
+      VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhxam1veHVmcGdhdWxjd3VqcnV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAxNTA0NDMsImV4cCI6MjA2NTcyNjQ0M30.DMBiE8fVvq3k9PP7kwZjYfEfS2HKASbOKL3dbACAja0
     ports:
       - "3000:3000"
     volumes:
@@ -82,8 +84,8 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - ./ssl:/etc/nginx/ssl
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
     networks:
       - tax_compliance_network
     restart: unless-stopped
