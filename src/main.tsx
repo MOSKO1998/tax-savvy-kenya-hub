@@ -19,4 +19,12 @@ try {
   console.log('App rendered successfully');
 } catch (error) {
   console.error('Error rendering app:', error);
+  // Fallback rendering
+  rootElement.innerHTML = `
+    <div style="padding: 20px; text-align: center;">
+      <h1>Tax Compliance Hub</h1>
+      <p>Application failed to load. Please check the console for errors.</p>
+      <p>Error: ${error}</p>
+    </div>
+  `;
 }

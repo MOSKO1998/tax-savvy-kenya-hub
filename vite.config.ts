@@ -24,11 +24,11 @@ export default defineConfig(({ mode }) => ({
     global: 'globalThis',
   },
   optimizeDeps: {
-    exclude: ['pg', 'fs', 'path', 'os']
+    exclude: []
   },
   build: {
     rollupOptions: {
-      external: ['pg', 'fs', 'path', 'os']
+      external: []
     }
   }
 }));
