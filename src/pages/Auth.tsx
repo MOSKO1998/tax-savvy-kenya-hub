@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Eye, EyeOff, Lock, Mail, Calendar, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -22,9 +23,17 @@ const Auth = () => {
     confirmPassword: ""
   });
 
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      console.log('User already logged in, redirecting to dashboard');
+      navigate("/");
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,14 +41,17 @@ const Auth = () => {
 
     try {
       if (isLogin) {
+        console.log('Attempting login with:', formData.email);
         const { error } = await signIn(formData.email, formData.password);
         if (error) {
+          console.error('Login error:', error);
           toast({
             title: "Login Error",
-            description: error.message,
+            description: error.message || "Invalid email or password",
             variant: "destructive",
           });
         } else {
+          console.log('Login successful');
           toast({
             title: "Success",
             description: "Logged in successfully!",
@@ -57,22 +69,26 @@ const Auth = () => {
           return;
         }
 
+        console.log('Attempting signup with:', formData.email);
         const { error } = await signUp(formData.email, formData.password, formData.fullName);
         if (error) {
+          console.error('Signup error:', error);
           toast({
             title: "Sign Up Error",
-            description: error.message,
+            description: error.message || "Failed to create account",
             variant: "destructive",
           });
         } else {
+          console.log('Signup successful');
           toast({
             title: "Success",
-            description: "Account created successfully! Please check your email to verify your account.",
+            description: "Account created successfully!",
           });
           setIsLogin(true);
         }
       }
     } catch (error) {
+      console.error('Auth error:', error);
       toast({
         title: "Error",
         description: "An unexpected error occurred",
@@ -80,6 +96,39 @@ const Auth = () => {
       });
     }
 
+    setLoading(false);
+  };
+
+  const handleDemoLogin = async () => {
+    setLoading(true);
+    console.log('Attempting demo login');
+    
+    try {
+      const { error } = await signIn("demo@chandariashah.com", "demo123");
+      if (error) {
+        console.error('Demo login error:', error);
+        toast({
+          title: "Demo Login Failed",
+          description: "Please try creating a new account instead",
+          variant: "destructive",
+        });
+      } else {
+        console.log('Demo login successful');
+        toast({
+          title: "Demo Mode",
+          description: "Welcome to the demo!",
+        });
+        navigate("/");
+      }
+    } catch (error) {
+      console.error('Demo login exception:', error);
+      toast({
+        title: "Demo Login Failed",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+    }
+    
     setLoading(false);
   };
 
@@ -189,20 +238,34 @@ const Auth = () => {
 
             <Separator className="my-6" />
 
-            <div className="text-center">
+            <div className="space-y-4">
               <Button
-                variant="link"
-                onClick={() => setIsLogin(!isLogin)}
-                className="text-sm"
+                variant="outline"
+                onClick={handleDemoLogin}
+                className="w-full"
+                disabled={loading}
               >
-                {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+                <User className="h-4 w-4 mr-2" />
+                Try Demo Login
               </Button>
+
+              <div className="text-center">
+                <Button
+                  variant="link"
+                  onClick={() => setIsLogin(!isLogin)}
+                  className="text-sm"
+                >
+                  {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+                </Button>
+              </div>
             </div>
 
             <Alert className="mt-4">
               <Lock className="h-4 w-4" />
               <AlertDescription>
-                <strong>Note:</strong> After creating an account, you'll be assigned a default 'readonly' role. Contact your administrator to upgrade your permissions.
+                <strong>Demo Credentials:</strong><br />
+                Email: demo@chandariashah.com<br />
+                Password: demo123
               </AlertDescription>
             </Alert>
           </CardContent>
