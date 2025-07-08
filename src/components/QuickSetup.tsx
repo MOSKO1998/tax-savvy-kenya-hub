@@ -72,16 +72,33 @@ export const QuickSetup = () => {
           break;
 
         case 'demo-data':
-          // Insert demo data
-          const { error: demoError } = await supabase
+          // Check if demo data already exists
+          const { data: existingProfile, error: checkError } = await supabase
             .from('profiles')
-            .upsert({
-              email: 'demo@chandariashah.com',
-              full_name: 'Demo User',
-              company_name: 'Chandaria Shah & Associates'
-            }, { onConflict: 'email' });
+            .select('email')
+            .eq('email', 'demo@chandariashah.com')
+            .single();
+
+          if (checkError && checkError.code !== 'PGRST116') {
+            // Error other than "not found"
+            throw checkError;
+          }
+
+          if (!existingProfile) {
+            // Create demo profile with a generated UUID
+            const demoUserId = crypto.randomUUID();
+            const { error: insertError } = await supabase
+              .from('profiles')
+              .insert({
+                id: demoUserId,
+                email: 'demo@chandariashah.com',
+                full_name: 'Demo User',
+                company_name: 'Chandaria Shah & Associates'
+              });
+            
+            if (insertError) throw insertError;
+          }
           
-          if (demoError) throw demoError;
           updateStepStatus('demo-data', true);
           toast.success('Demo data loaded successfully');
           break;
@@ -95,6 +112,30 @@ export const QuickSetup = () => {
             .single();
           
           if (adminError && adminError.code !== 'PGRST116') throw adminError;
+          
+          if (adminData) {
+            // Check if user role exists
+            const { data: roleData, error: roleError } = await supabase
+              .from('user_roles')
+              .select('*')
+              .eq('user_id', adminData.id)
+              .single();
+
+            if (roleError && roleError.code === 'PGRST116') {
+              // Create admin role if it doesn't exist
+              const { error: roleInsertError } = await supabase
+                .from('user_roles')
+                .insert({
+                  user_id: adminData.id,
+                  role: 'admin',
+                  department: 'management',
+                  permissions: ['all']
+                });
+              
+              if (roleInsertError) throw roleInsertError;
+            }
+          }
+          
           updateStepStatus('admin-user', true);
           toast.success('Admin user verified');
           break;
