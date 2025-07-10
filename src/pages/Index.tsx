@@ -58,7 +58,7 @@ const Index = () => {
   const renderActiveComponent = () => {
     switch (activeTab) {
       case "dashboard":
-        return <DashboardOverview />;
+        return <DashboardOverview setActiveTab={setActiveTab} />;
       case "clients":
         return <ClientManagement />;
       case "obligations":
@@ -78,7 +78,7 @@ const Index = () => {
       case "user-management":
         return <UserManagement />;
       default:
-        return <DashboardOverview />;
+        return <DashboardOverview setActiveTab={setActiveTab} />;
     }
   };
 
