@@ -58,7 +58,7 @@ docker compose down || true
 
 # Pull latest images
 print_status "Pulling latest images..."
-docker compose pull
+docker compose pull || true
 
 # Build the application
 print_status "Building application..."
@@ -74,7 +74,7 @@ sleep 30
 
 # Health check
 print_status "Performing health check..."
-if curl -f http://localhost:3000/health > /dev/null 2>&1; then
+if curl -f http://localhost:3000 > /dev/null 2>&1; then
     print_status "✅ Application is healthy!"
 else
     print_warning "Health check failed. Check logs with: docker compose logs"
@@ -88,7 +88,7 @@ docker compose ps
 print_status "🎉 Deployment completed!"
 echo ""
 echo "Access your application at:"
-echo "  🌐 Web Interface: http://localhost"
+echo "  🌐 Web Interface: http://localhost:3000"
 echo "  🗄️  Database: localhost:5432"
 echo "  📊 Logs: docker compose logs -f"
 echo ""

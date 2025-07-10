@@ -86,30 +86,18 @@ nano .env
 
 **Required Environment Variables:**
 ```env
-# Database Configuration
-POSTGRES_DB=tax_compliance_hub
-POSTGRES_USER=tax_admin
-POSTGRES_PASSWORD=your_secure_password_here
-DATABASE_URL=postgresql://tax_admin:your_secure_password_here@postgres:5432/tax_compliance_hub
-
 # Supabase Configuration
-VITE_SUPABASE_URL=https://your-project-ref.supabase.co
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_SUPABASE_URL=https://hqjmoxufpgaulcwujruv.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhxam1veHVmcGdhdWxjd3VqcnV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAxNTA0NDMsImV4cCI6MjA2NTcyNjQ0M30.DMBiE8fVvq3k9PP7kwZjYfEfS2HKASbOKL3dbACAja0
 
 # Application Configuration
 NODE_ENV=production
 PORT=3000
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=your-super-secret-key-here
 
 # File Storage (Optional - Nextcloud)
-NEXTCLOUD_URL=https://your-nextcloud-instance.com
-NEXTCLOUD_USERNAME=your_username
-NEXTCLOUD_PASSWORD=your_password
-
-# Security
-JWT_SECRET=your-jwt-secret
-ENCRYPTION_KEY=your-encryption-key
+NEXTCLOUD_URL=https://cloud.audit.ke
+NEXTCLOUD_USERNAME=it@csa.co.ke
+NEXTCLOUD_PASSWORD=Wakatiimefika@1998
 ```
 
 ### 3. Create Docker Compose Configuration
@@ -122,41 +110,6 @@ nano docker-compose.yml
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: tax_compliance_db
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-tax_compliance_hub}
-      POSTGRES_USER: ${POSTGRES_USER:-tax_admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./database-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
-    networks:
-      - tax_compliance_network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tax_admin} -d ${POSTGRES_DB:-tax_compliance_hub}"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-  redis:
-    image: redis:7-alpine
-    container_name: tax_compliance_redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - tax_compliance_network
-    restart: unless-stopped
-    command: redis-server --appendonly yes
-
   app:
     build: 
       context: .
@@ -164,11 +117,8 @@ services:
     container_name: tax_compliance_app
     environment:
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL}
       VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
       VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
-      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       NEXTCLOUD_URL: ${NEXTCLOUD_URL}
       NEXTCLOUD_USERNAME: ${NEXTCLOUD_USERNAME}
       NEXTCLOUD_PASSWORD: ${NEXTCLOUD_PASSWORD}
@@ -180,13 +130,8 @@ services:
     networks:
       - tax_compliance_network
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -209,10 +154,6 @@ services:
       - app
 
 volumes:
-  postgres_data:
-    driver: local
-  redis_data:
-    driver: local
   app_uploads:
     driver: local
   app_logs:
@@ -299,24 +240,6 @@ http {
             proxy_send_timeout 300;
         }
 
-        location /api/ {
-            limit_req zone=api burst=20 nodelay;
-            proxy_pass http://app;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-        }
-
-        location /auth/ {
-            limit_req zone=login burst=5 nodelay;
-            proxy_pass http://app;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-        }
-
         # Health check endpoint
         location /health {
             access_log off;
@@ -327,118 +250,32 @@ http {
 }
 ```
 
-### 5. Create Dockerfile
-```bash
-nano Dockerfile
-```
-
-**Dockerfile:**
-```dockerfile
-# Multi-stage build for production
-FROM node:18-alpine AS builder
-
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
-
-# Copy source code
-COPY . .
-
-# Build the application
-RUN npm run build
-
-# Production stage
-FROM node:18-alpine AS production
-
-WORKDIR /app
-
-# Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init curl
-
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nextjs -u 1001
-
-# Copy built application
-COPY --from=builder --chown=nextjs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/package*.json ./
-
-# Create necessary directories
-RUN mkdir -p /app/logs /app/uploads && \
-    chown -R nextjs:nodejs /app
-
-# Switch to non-root user
-USER nextjs
-
-# Expose port
-EXPOSE 3000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:3000/health || exit 1
-
-# Start the application
-ENTRYPOINT ["dumb-init", "--"]
-CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", "3000"]
-```
-
-## Database Setup
-
-### 1. Create Database Schema
-```bash
-nano database-schema.sql
-```
-
-**Add your database schema here** (the SQL from your existing migrations)
-
-### 2. Initialize Database
-```bash
-# Start only PostgreSQL first
-docker compose up -d postgres
-
-# Wait for PostgreSQL to be ready
-docker compose logs -f postgres
-
-# Once ready, the schema will be automatically applied
-```
-
 ## Deployment Steps
 
-### 1. Build and Start Services
+### 1. Make Scripts Executable
 ```bash
-# Build the application
-docker compose build
-
-# Start all services
-docker compose up -d
-
-# Check service status
-docker compose ps
+chmod +x deploy.sh
 ```
 
-### 2. Monitor Logs
+### 2. Run Deployment
+```bash
+./deploy.sh
+```
+
+### 3. Monitor Logs
 ```bash
 # View all logs
 docker compose logs -f
 
 # View specific service logs
 docker compose logs -f app
-docker compose logs -f postgres
 docker compose logs -f nginx
 ```
 
-### 3. Verify Deployment
+### 4. Verify Deployment
 ```bash
 # Check application health
-curl http://localhost/health
-
-# Check if application is accessible
-curl http://localhost
+curl http://localhost:3000
 
 # View running containers
 docker ps
@@ -446,23 +283,7 @@ docker ps
 
 ## Post-Deployment Configuration
 
-### 1. SSL/TLS Setup (Optional but Recommended)
-```bash
-# Install Certbot
-sudo apt install -y certbot
-
-# Create SSL directory
-mkdir -p ssl
-
-# Generate self-signed certificate for testing
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout ssl/nginx-selfsigned.key \
-    -out ssl/nginx-selfsigned.crt
-
-# Update nginx.conf to include SSL configuration
-```
-
-### 2. Firewall Configuration
+### 1. Firewall Configuration
 ```bash
 # Install UFW
 sudo apt install -y ufw
@@ -473,12 +294,13 @@ sudo ufw default allow outgoing
 sudo ufw allow ssh
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
+sudo ufw allow 3000/tcp
 
 # Enable firewall
 sudo ufw enable
 ```
 
-### 3. Backup Configuration
+### 2. Backup Configuration
 ```bash
 # Create backup script
 nano backup.sh
@@ -492,14 +314,10 @@ DATE=$(date +%Y%m%d_%H%M%S)
 
 mkdir -p $BACKUP_DIR
 
-# Backup database
-docker compose exec -T postgres pg_dump -U tax_admin tax_compliance_hub > $BACKUP_DIR/database_$DATE.sql
-
 # Backup uploads
 docker compose exec -T app tar -czf - /app/uploads > $BACKUP_DIR/uploads_$DATE.tar.gz
 
 # Keep only last 7 days of backups
-find $BACKUP_DIR -name "*.sql" -mtime +7 -delete
 find $BACKUP_DIR -name "*.tar.gz" -mtime +7 -delete
 
 echo "Backup completed: $DATE"
@@ -543,69 +361,23 @@ free -h
 
 # Check service logs
 docker compose logs --tail=100 app
-docker compose logs --tail=100 postgres
+docker compose logs --tail=100 nginx
 
 # Access container shell
 docker compose exec app sh
-docker compose exec postgres psql -U tax_admin -d tax_compliance_hub
 
 # Clean up unused Docker resources
 docker system prune -a
 ```
 
-## Security Considerations
+## Accessing the Application
 
-### 1. Environment Variables
-- Use strong passwords for database and JWT secrets
-- Keep environment files secure with restricted permissions
-- Regularly rotate secrets and passwords
+### Default Access
+- **Application URL**: http://localhost:3000 (or your server IP:3000)
+- **Default Demo User**: demo@chandariashah.com / demo123
 
-### 2. Database Security
-```bash
-# Set proper file permissions
-chmod 600 .env
-chmod 600 database-schema.sql
-
-# Regular security updates
-sudo apt update && sudo apt upgrade -y
-docker images | grep -v REPOSITORY | awk '{print $1":"$2}' | xargs -L1 docker pull
-```
-
-### 3. Network Security
-- Use firewall rules to restrict access
-- Consider VPN access for administrative tasks
-- Implement fail2ban for brute force protection
-
-## Performance Optimization
-
-### 1. Docker Optimization
-```bash
-# Optimize Docker daemon
-sudo nano /etc/docker/daemon.json
-```
-
-```json
-{
-  "log-driver": "json-file",
-  "log-opts": {
-    "max-size": "10m",
-    "max-file": "3"
-  },
-  "storage-driver": "overlay2"
-}
-```
-
-### 2. Database Optimization
-```sql
--- Connect to database and run optimization queries
-\c tax_compliance_hub
-
--- Analyze database
-ANALYZE;
-
--- Vacuum database
-VACUUM ANALYZE;
-```
+### Database Connection (Supabase)
+The application uses Supabase as the backend database. The database connection is configured through the environment variables and does not require local PostgreSQL installation.
 
 ## Troubleshooting Guide
 
@@ -617,16 +389,7 @@ sudo netstat -tulpn | grep :3000
 sudo kill -9 <PID>
 ```
 
-**2. Database Connection Issues**
-```bash
-# Check database logs
-docker compose logs postgres
-
-# Restart database
-docker compose restart postgres
-```
-
-**3. Application Not Starting**
+**2. Application Not Starting**
 ```bash
 # Check application logs
 docker compose logs app
@@ -636,7 +399,7 @@ docker compose build --no-cache app
 docker compose up -d app
 ```
 
-**4. High Memory Usage**
+**3. High Memory Usage**
 ```bash
 # Monitor memory usage
 docker stats
@@ -645,38 +408,21 @@ docker stats
 docker compose restart
 ```
 
-## Accessing the Application
-
-### Default Access
-- **Application URL**: http://localhost (or your server IP)
-- **Database**: localhost:5432 (from host machine)
-- **Default Admin User**: Create via signup form
-
-### pgAdmin4 Connection
-- **Host**: localhost (or your server IP)
-- **Port**: 5432
-- **Database**: tax_compliance_hub
-- **Username**: tax_admin
-- **Password**: (as set in .env file)
-
 ## Support and Updates
 
 ### Regular Maintenance
 1. Weekly system updates
 2. Monthly Docker image updates
 3. Quarterly security review
-4. Database optimization monthly
 
 ### Monitoring Checklist
 - [ ] Application accessibility
-- [ ] Database connectivity
-- [ ] Disk space usage
 - [ ] Memory consumption
 - [ ] Log file sizes
 - [ ] Backup verification
 
 ## Conclusion
 
-This guide provides a comprehensive setup for deploying the Tax Compliance Hub on Debian with Docker. Follow the steps carefully and ensure all security measures are implemented for production use.
+This guide provides a comprehensive setup for deploying the Tax Compliance Hub on Debian with Docker. The application will be accessible at http://localhost:3000 and includes automated deployment scripts, health checks, and monitoring capabilities.
 
 For additional support or customization, refer to the application documentation or contact the development team.

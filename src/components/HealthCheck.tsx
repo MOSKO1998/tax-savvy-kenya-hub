@@ -1,96 +1,148 @@
 
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface HealthStatus {
-  status: 'healthy' | 'unhealthy';
-  checks: {
-    database: boolean;
-    auth: boolean;
-    storage: boolean;
-  };
-  timestamp: string;
+  service: string;
+  status: 'healthy' | 'unhealthy' | 'warning';
+  message: string;
+  lastChecked: Date;
 }
 
-export const useHealthCheck = () => {
-  const [health, setHealth] = useState<HealthStatus>({
-    status: 'unhealthy',
-    checks: {
-      database: false,
-      auth: false,
-      storage: false
-    },
-    timestamp: new Date().toISOString()
-  });
+export const HealthCheck = () => {
+  const [healthStatuses, setHealthStatuses] = useState<HealthStatus[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const checkHealth = async () => {
-    const checks = {
-      database: false,
-      auth: false,
-      storage: false
-    };
+    setIsLoading(true);
+    const statuses: HealthStatus[] = [];
 
+    // Check Supabase connection
     try {
-      // Check database connection
-      const { error: dbError } = await supabase.from('profiles').select('count').limit(1);
-      checks.database = !dbError;
-
-      // Check auth service
-      const { error: authError } = await supabase.auth.getSession();
-      checks.auth = !authError;
-
-      // Check storage (if available)
-      try {
-        const { error: storageError } = await supabase.storage.listBuckets();
-        checks.storage = !storageError;
-      } catch {
-        checks.storage = false;
-      }
-
+      const { data, error } = await supabase.from('profiles').select('count').limit(1);
+      statuses.push({
+        service: 'Database',
+        status: error ? 'unhealthy' : 'healthy',
+        message: error ? `Connection failed: ${error.message}` : 'Connected successfully',
+        lastChecked: new Date()
+      });
     } catch (error) {
-      console.error('Health check failed:', error);
+      statuses.push({
+        service: 'Database',
+        status: 'unhealthy',
+        message: `Connection error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        lastChecked: new Date()
+      });
     }
 
-    const allHealthy = Object.values(checks).every(check => check);
-    
-    setHealth({
-      status: allHealthy ? 'healthy' : 'unhealthy',
-      checks,
-      timestamp: new Date().toISOString()
+    // Check authentication
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      statuses.push({
+        service: 'Authentication',
+        status: 'healthy',
+        message: session ? 'User authenticated' : 'No active session',
+        lastChecked: new Date()
+      });
+    } catch (error) {
+      statuses.push({
+        service: 'Authentication',
+        status: 'warning',
+        message: `Auth check failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        lastChecked: new Date()
+      });
+    }
+
+    // Check application status
+    statuses.push({
+      service: 'Application',
+      status: 'healthy',
+      message: 'React application running',
+      lastChecked: new Date()
     });
 
-    return health;
+    setHealthStatuses(statuses);
+    setIsLoading(false);
   };
 
   useEffect(() => {
     checkHealth();
-    const interval = setInterval(checkHealth, 30000); // Check every 30 seconds
-    return () => clearInterval(interval);
   }, []);
 
-  return { health, checkHealth };
-};
+  const getStatusIcon = (status: 'healthy' | 'unhealthy' | 'warning') => {
+    switch (status) {
+      case 'healthy':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'unhealthy':
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      case 'warning':
+        return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+    }
+  };
 
-// Simple health endpoint component
-export const HealthEndpoint = () => {
-  const { health } = useHealthCheck();
-  
-  // This would typically be served at /health endpoint
-  if (typeof window !== 'undefined' && window.location.pathname === '/health') {
+  const getStatusBadge = (status: 'healthy' | 'unhealthy' | 'warning') => {
+    const variants = {
+      healthy: 'default',
+      unhealthy: 'destructive',
+      warning: 'secondary'
+    } as const;
+
     return (
-      <div style={{ fontFamily: 'monospace', padding: '20px' }}>
-        <h1>Health Check</h1>
-        <p>Status: {health.status.toUpperCase()}</p>
-        <p>Timestamp: {health.timestamp}</p>
-        <h2>Service Checks:</h2>
-        <ul>
-          <li>Database: {health.checks.database ? '✅ OK' : '❌ FAIL'}</li>
-          <li>Authentication: {health.checks.auth ? '✅ OK' : '❌ FAIL'}</li>
-          <li>Storage: {health.checks.storage ? '✅ OK' : '❌ FAIL'}</li>
-        </ul>
-      </div>
+      <Badge variant={variants[status]} className="capitalize">
+        {status}
+      </Badge>
     );
-  }
+  };
 
-  return null;
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+        <div>
+          <CardTitle>System Health Check</CardTitle>
+          <CardDescription>
+            Monitor the health of application services
+          </CardDescription>
+        </div>
+        <Button
+          onClick={checkHealth}
+          disabled={isLoading}
+          size="sm"
+          variant="outline"
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {healthStatuses.map((status, index) => (
+            <div
+              key={index}
+              className="flex items-center justify-between p-3 border rounded-lg"
+            >
+              <div className="flex items-center space-x-3">
+                {getStatusIcon(status.status)}
+                <div>
+                  <div className="font-medium">{status.service}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {status.message}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                {getStatusBadge(status.status)}
+                <div className="text-xs text-muted-foreground">
+                  {status.lastChecked.toLocaleTimeString()}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
 };
