@@ -38,14 +38,20 @@ export const AuthCoreProvider = ({ children }: { children: ReactNode }) => {
 
     const initializeAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Initializing auth...');
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting session:', error);
+        }
         
         if (!mounted) return;
         
+        console.log('Initial session:', session);
         setSession(session);
         setUser(session?.user ?? null);
         
-        if (session?.user?.email === 'demo@chandariashah.com' && isDevelopment) {
+        if (session?.user?.email === 'demo@chandariashah.com') {
           setIsDemoMode(true);
         }
       } catch (error) {
@@ -61,11 +67,11 @@ export const AuthCoreProvider = ({ children }: { children: ReactNode }) => {
       async (event, session) => {
         if (!mounted) return;
         
-        console.log('Auth state change:', event);
+        console.log('Auth state change:', event, session);
         setSession(session);
         setUser(session?.user ?? null);
         
-        if (session?.user?.email === 'demo@chandariashah.com' && isDevelopment) {
+        if (session?.user?.email === 'demo@chandariashah.com') {
           setIsDemoMode(true);
         } else {
           setIsDemoMode(false);
@@ -85,48 +91,26 @@ export const AuthCoreProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      if (isDevelopment && email === 'demo@chandariashah.com' && password === 'demo123') {
-        const mockUser = {
-          id: 'demo-user-id',
-          aud: 'authenticated',
-          role: 'authenticated',
-          email: 'demo@chandariashah.com',
-          email_confirmed_at: new Date().toISOString(),
-          phone: '',
-          confirmed_at: new Date().toISOString(),
-          last_sign_in_at: new Date().toISOString(),
-          app_metadata: {},
-          user_metadata: { 
-            full_name: 'Demo User',
-            company_name: 'Chandaria Shah & Associates'
-          },
-          identities: [],
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        } as User;
-        
-        const mockSession = {
-          user: mockUser,
-          access_token: 'demo-token',
-          refresh_token: 'demo-refresh',
-          expires_at: Math.floor(Date.now() / 1000) + 3600,
-          expires_in: 3600,
-          token_type: 'bearer'
-        } as Session;
-
-        setSession(mockSession);
-        setUser(mockUser);
-        setIsDemoMode(true);
-        
-        return { error: null };
+      console.log('Attempting sign in for:', email);
+      
+      // Handle demo login without creating invalid UUID
+      if (email === 'demo@chandariashah.com' && password === 'demo123') {
+        console.log('Demo login detected, using regular Supabase auth');
       }
 
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
-      return { error };
+      console.log('Sign in result:', { data, error });
+      
+      if (error) {
+        console.error('Sign in error:', error);
+        return { error };
+      }
+      
+      return { error: null };
     } catch (error) {
       console.error('Sign in exception:', error);
       return { error };
@@ -135,17 +119,24 @@ export const AuthCoreProvider = ({ children }: { children: ReactNode }) => {
 
   const signUp = async (email: string, password: string, fullName: string, metadata: any = {}) => {
     try {
-      const { error } = await supabase.auth.signUp({
+      console.log('Attempting sign up for:', email);
+      
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo: redirectUrl,
           data: {
             full_name: fullName,
-            username: metadata.username,
-            company_name: metadata.company_name,
+            username: metadata.username || fullName.toLowerCase().replace(/\s+/g, '_'),
+            company_name: metadata.company_name || 'Default Company',
           },
         },
       });
+      
+      console.log('Sign up result:', { data, error });
       
       return { error };
     } catch (error) {
@@ -156,14 +147,9 @@ export const AuthCoreProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     try {
-      if (isDemoMode) {
-        setUser(null);
-        setSession(null);
-        setIsDemoMode(false);
-        return;
-      }
-      
+      console.log('Signing out...');
       await supabase.auth.signOut();
+      setIsDemoMode(false);
     } catch (error) {
       console.error('Sign out error:', error);
     }

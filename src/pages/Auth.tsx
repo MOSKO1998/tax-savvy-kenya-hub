@@ -47,7 +47,7 @@ const Auth = () => {
           console.error('Login error:', error);
           toast({
             title: "Login Error",
-            description: error.message || "Invalid email or password",
+            description: error.message || "Invalid email or password. Please check your credentials.",
             variant: "destructive",
           });
         } else {
@@ -69,29 +69,45 @@ const Auth = () => {
           return;
         }
 
+        if (formData.password.length < 6) {
+          toast({
+            title: "Error",
+            description: "Password must be at least 6 characters long",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+
         console.log('Attempting signup with:', formData.email);
         const { error } = await signUp(formData.email, formData.password, formData.fullName);
         if (error) {
           console.error('Signup error:', error);
           toast({
             title: "Sign Up Error",
-            description: error.message || "Failed to create account",
+            description: error.message || "Failed to create account. Please try again.",
             variant: "destructive",
           });
         } else {
           console.log('Signup successful');
           toast({
             title: "Success",
-            description: "Account created successfully!",
+            description: "Account created successfully! Please check your email for verification.",
           });
           setIsLogin(true);
+          setFormData({
+            email: formData.email,
+            password: "",
+            fullName: "",
+            confirmPassword: ""
+          });
         }
       }
     } catch (error) {
       console.error('Auth error:', error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred",
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     }
@@ -109,7 +125,7 @@ const Auth = () => {
         console.error('Demo login error:', error);
         toast({
           title: "Demo Login Failed",
-          description: "Please try creating a new account instead",
+          description: "Demo account is not available. Please create a new account.",
           variant: "destructive",
         });
       } else {

@@ -5,11 +5,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { Sidebar } from "@/components/Sidebar";
 import { DashboardOverview } from "@/components/DashboardOverview";
+import { Button } from "@/components/ui/button";
+import { LogOut } from "lucide-react";
 
 const Index = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
-  const { user, loading } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
 
   console.log('Index component rendering, loading:', loading, 'user:', user);
@@ -26,6 +28,12 @@ const Index = () => {
       }
     }
   }, [user, loading, navigate]);
+
+  const handleSignOut = async () => {
+    console.log('Signing out...');
+    await signOut();
+    navigate("/auth");
+  };
 
   if (loading || isLoading) {
     console.log('Showing loading screen');
@@ -49,6 +57,15 @@ const Index = () => {
             <h1 className="text-2xl font-bold text-gray-900">Tax Compliance Hub</h1>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-600">Welcome, {user.email}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSignOut}
+                className="flex items-center gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign Out
+              </Button>
             </div>
           </div>
         </header>
