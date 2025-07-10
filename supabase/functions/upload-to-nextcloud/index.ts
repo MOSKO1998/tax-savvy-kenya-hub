@@ -20,14 +20,19 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    // Get Nextcloud configuration from environment variables
-    const nextcloudUrl = Deno.env.get("NEXTCLOUD_URL") || "https://cloud.audit.ke";
-    const nextcloudUsername = Deno.env.get("NEXTCLOUD_USERNAME") || "it@csa.co.ke";
-    const nextcloudPassword = Deno.env.get("NEXTCLOUD_PASSWORD") || "Wakatiimefika@1998";
+    console.log("Starting Nextcloud upload process...");
 
-    if (!nextcloudUsername || !nextcloudPassword) {
-      throw new Error("Nextcloud credentials not configured");
+    // Get Nextcloud configuration from environment variables
+    const nextcloudUrl = Deno.env.get("NEXTCLOUD_URL");
+    const nextcloudUsername = Deno.env.get("NEXTCLOUD_USERNAME");
+    const nextcloudPassword = Deno.env.get("NEXTCLOUD_PASSWORD");
+
+    if (!nextcloudUrl || !nextcloudUsername || !nextcloudPassword) {
+      console.error("Missing Nextcloud configuration");
+      throw new Error("Nextcloud server not configured. Please check deployment settings.");
     }
+
+    console.log(`Nextcloud URL configured: ${nextcloudUrl}`);
 
     const formData = await req.formData();
     const file = formData.get("file") as File;
@@ -36,22 +41,49 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("No file provided");
     }
 
+    console.log(`Processing file: ${file.name} (${file.size} bytes)`);
+
     const title = formData.get("title") as string || file.name;
     const description = formData.get("description") as string || "";
     const documentType = formData.get("documentType") as string || "other";
     const clientId = formData.get("clientId") as string;
     const obligationId = formData.get("obligationId") as string;
 
-    // Generate unique filename
+    // Generate secure filename with timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const fileName = `${timestamp}_${file.name}`;
-    const nextcloudPath = `/documents/${fileName}`;
+    const fileExtension = file.name.split('.').pop() || '';
+    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const fileName = `${timestamp}_${safeName}`;
+    
+    // Organize files in folders by document type and date
+    const folderPath = `/TaxCompliance/${documentType}/${new Date().getFullYear()}`;
+    const nextcloudPath = `${folderPath}/${fileName}`;
+
+    console.log(`Target path: ${nextcloudPath}`);
 
     // Create authorization header for Nextcloud
     const auth = btoa(`${nextcloudUsername}:${nextcloudPassword}`);
     
+    // First, try to create the folder structure
+    const folderUrl = `${nextcloudUrl}/remote.php/dav/files/${nextcloudUsername}${folderPath}`;
+    
+    try {
+      await fetch(folderUrl, {
+        method: "MKCOL",
+        headers: {
+          "Authorization": `Basic ${auth}`,
+        },
+      });
+      console.log("Folder structure created/verified");
+    } catch (folderError) {
+      console.log("Folder may already exist or creation failed:", folderError);
+      // Continue anyway, folder might already exist
+    }
+
     // Upload file to Nextcloud
     const uploadUrl = `${nextcloudUrl}/remote.php/dav/files/${nextcloudUsername}${nextcloudPath}`;
+    
+    console.log(`Uploading to: ${uploadUrl}`);
     
     const uploadResponse = await fetch(uploadUrl, {
       method: "PUT",
@@ -63,41 +95,52 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     if (!uploadResponse.ok) {
-      throw new Error(`Nextcloud upload failed: ${uploadResponse.statusText}`);
+      const errorText = await uploadResponse.text();
+      console.error(`Nextcloud upload failed: ${uploadResponse.status} - ${errorText}`);
+      throw new Error(`Nextcloud upload failed: ${uploadResponse.statusText}. Check server connectivity and credentials.`);
     }
 
     console.log(`File uploaded successfully to Nextcloud: ${nextcloudPath}`);
 
-    // Create share link
-    const shareUrl = `${nextcloudUrl}/ocs/v2.php/apps/files_sharing/api/v1/shares`;
-    const shareData = new URLSearchParams({
-      path: nextcloudPath,
-      shareType: "3", // Public link
-      permissions: "1", // Read only
-    });
-
-    const shareResponse = await fetch(shareUrl, {
-      method: "POST",
-      headers: {
-        "Authorization": `Basic ${auth}`,
-        "OCS-APIRequest": "true",
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: shareData,
-    });
-
+    // Create public share link
     let publicShareUrl = "";
-    if (shareResponse.ok) {
-      const shareResult = await shareResponse.text();
-      console.log("Share response:", shareResult);
-      // Extract share URL from XML response (simplified)
-      const urlMatch = shareResult.match(/<url>(.*?)<\/url>/);
-      if (urlMatch) {
-        publicShareUrl = urlMatch[1];
+    try {
+      const shareUrl = `${nextcloudUrl}/ocs/v2.php/apps/files_sharing/api/v1/shares`;
+      const shareData = new URLSearchParams({
+        path: nextcloudPath,
+        shareType: "3", // Public link
+        permissions: "1", // Read only
+        password: "", // No password for now
+      });
+
+      const shareResponse = await fetch(shareUrl, {
+        method: "POST",
+        headers: {
+          "Authorization": `Basic ${auth}`,
+          "OCS-APIRequest": "true",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: shareData,
+      });
+
+      if (shareResponse.ok) {
+        const shareResult = await shareResponse.text();
+        console.log("Share response received");
+        
+        // Extract share URL from XML response
+        const urlMatch = shareResult.match(/<url>(.*?)<\/url>/);
+        if (urlMatch) {
+          publicShareUrl = urlMatch[1];
+          console.log("Public share URL created");
+        }
+      } else {
+        console.log("Share creation failed, but upload succeeded");
       }
+    } catch (shareError) {
+      console.log("Share creation error (non-critical):", shareError);
     }
 
-    // In a real implementation, you would also save document metadata to Supabase
+    // Prepare response
     const result: UploadResult = {
       success: true,
       document: {
@@ -112,10 +155,10 @@ const handler = async (req: Request): Promise<Response> => {
         uploadedAt: new Date().toISOString(),
       },
       nextcloudPath,
-      shareUrl: publicShareUrl || `${nextcloudUrl}/s/placeholder`,
+      shareUrl: publicShareUrl || `${nextcloudUrl}${nextcloudPath}`,
     };
 
-    console.log("Upload completed successfully:", result);
+    console.log("Upload completed successfully");
 
     return new Response(
       JSON.stringify(result),
@@ -133,7 +176,7 @@ const handler = async (req: Request): Promise<Response> => {
     
     const result: UploadResult = {
       success: false,
-      error: error.message || "Upload failed",
+      error: error.message || "Upload failed - please check server configuration",
     };
 
     return new Response(

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { demoDataService } from '@/services/demoDataService';
 
 export const useTaxObligations = () => {
   const [obligations, setObligations] = useState<any[]>([]);
@@ -15,10 +16,9 @@ export const useTaxObligations = () => {
   const fetchObligations = async () => {
     setLoading(true);
     
-    // Always start fresh - no demo data
     if (isDemoMode) {
-      console.log('Demo mode: Using empty obligations for fresh start');
-      setObligations([]);
+      console.log('Demo mode: Loading sample obligations');
+      setObligations(demoDataService.getDemoObligations(user?.email));
       setLoading(false);
       return;
     }
@@ -62,7 +62,7 @@ export const useTaxObligations = () => {
   const addObligation = async (obligationData: any) => {
     if (isDemoMode) {
       console.log('Demo mode: Cannot add real obligations');
-      return { success: false, error: 'Demo mode active' };
+      return { success: false, error: 'Demo mode active - changes not saved' };
     }
 
     if (!user) {
@@ -77,7 +77,7 @@ export const useTaxObligations = () => {
         .insert([{
           ...obligationData,
           created_by: user.id,
-          due_date: obligationData.due_date.toISOString().split('T')[0] // Format as date
+          due_date: obligationData.due_date.toISOString().split('T')[0]
         }])
         .select(`
           *,
@@ -105,7 +105,7 @@ export const useTaxObligations = () => {
   const updateObligation = async (id: string, updates: any) => {
     if (isDemoMode) {
       console.log('Demo mode: Cannot update real obligations');
-      return { success: false, error: 'Demo mode active' };
+      return { success: false, error: 'Demo mode active - changes not saved' };
     }
 
     try {
@@ -150,7 +150,7 @@ export const useTaxObligations = () => {
   const deleteObligation = async (id: string) => {
     if (isDemoMode) {
       console.log('Demo mode: Cannot delete real obligations');
-      return { success: false, error: 'Demo mode active' };
+      return { success: false, error: 'Demo mode active - changes not saved' };
     }
 
     try {

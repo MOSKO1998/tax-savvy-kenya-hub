@@ -11,7 +11,7 @@ export const useClients = () => {
 
   const fetchClients = async () => {
     if (isDemoMode) {
-      setClients(demoDataService.getDemoClients());
+      setClients(demoDataService.getDemoClients(user?.email));
       setLoading(false);
       return;
     }
@@ -41,7 +41,7 @@ export const useClients = () => {
   const addClient = async (clientData: any) => {
     if (isDemoMode) {
       console.log('Demo mode: Cannot add real clients');
-      return { success: false, error: 'Demo mode active' };
+      return { success: false, error: 'Demo mode active - changes not saved' };
     }
 
     if (!user) {
@@ -71,7 +71,7 @@ export const useClients = () => {
   const updateClient = async (id: string, updates: any) => {
     if (isDemoMode) {
       console.log('Demo mode: Cannot update real clients');
-      return { success: false, error: 'Demo mode active' };
+      return { success: false, error: 'Demo mode active - changes not saved' };
     }
 
     try {
@@ -97,7 +97,7 @@ export const useClients = () => {
   const deleteClient = async (id: string) => {
     if (isDemoMode) {
       console.log('Demo mode: Cannot delete real clients');
-      return { success: false, error: 'Demo mode active' };
+      return { success: false, error: 'Demo mode active - changes not saved' };
     }
 
     try {
