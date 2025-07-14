@@ -9,7 +9,6 @@ import { AlertTriangle, Database, Download, Upload, RefreshCw, CheckCircle, XCir
 import { useToast } from '@/hooks/use-toast';
 import { dataExportService } from '@/services/dataExportService';
 import { hybridDataService } from '@/services/hybridDataService';
-import { localDB } from '@/lib/localDatabase';
 
 interface ExportOptions {
   includeClients: boolean;
@@ -40,8 +39,8 @@ export const DatabaseMigration = () => {
 
   const checkLocalConnection = async () => {
     try {
-      const connected = await localDB.connect();
-      setLocalConnected(connected);
+      // Simulate local DB connection check
+      setLocalConnected(false); // Always false since local DB is not available
     } catch (error) {
       console.error('Local DB connection check failed:', error);
       setLocalConnected(false);
