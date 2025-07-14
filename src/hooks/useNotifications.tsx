@@ -122,7 +122,7 @@ export const useNotifications = () => {
   const createNotification = async (notification: {
     title: string;
     message: string;
-    type: string;
+    type: 'deadline_reminder' | 'system_alert' | 'compliance_update' | 'document_uploaded' | 'user_action';
     data?: any;
   }) => {
     if (isDemoMode || !user) return { success: false };
